@@ -1,0 +1,6 @@
+# Build dir
+/target
+
+# Dev env configs
+/.idea
+/.vscode
