@@ -1,0 +1,40 @@
+name: "CI"
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: ["macos-latest", "ubuntu-latest"]
+    runs-on: "${{matrix.os}}"
+    steps:
+      - uses: "actions/checkout@v4"
+
+      - name: "Install Rust toolchain"
+        run: rustup show
+
+      - name: "Install Rust fmt toolchain"
+        run: rustup component add rustfmt
+
+      - name: "Install cargo nextest"
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      - name: "Cargo fmt"
+        run: cargo fmt --all --check
+
+      - name: "Cargo check"
+        run: cargo check
+
+      - name: "Cargo test"
+        run: cargo nextest run --all-features
