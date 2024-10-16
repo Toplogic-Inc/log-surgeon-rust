@@ -1,12 +1,12 @@
 // #[derive(Debug)]
 pub(crate) enum ASTNode {
-    Literal(char),          // Single character literal
+    Literal(char),                      // Single character literal
     Concat(Box<ASTNode>, Box<ASTNode>), // Concatenation of two expressions
     Union(Box<ASTNode>, Box<ASTNode>),  // Union of two expressions
-    Star(Box<ASTNode>),     // Kleene Star (zero or more)
-    Plus(Box<ASTNode>),     // One or more
-    Optional(Box<ASTNode>), // Zero or one (optional)
-    Group(Box<ASTNode>),    // Capturing group
+    Star(Box<ASTNode>),                 // Kleene Star (zero or more)
+    Plus(Box<ASTNode>),                 // One or more
+    Optional(Box<ASTNode>),             // Zero or one (optional)
+    Group(Box<ASTNode>),                // Capturing group
 }
 
 impl PartialEq for ASTNode {

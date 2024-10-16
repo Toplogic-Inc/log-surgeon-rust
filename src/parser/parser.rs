@@ -1,9 +1,9 @@
-use super::token::Token;
 use super::ast_node::ASTNode;
+use super::token::Token;
 
 pub struct ParserStream {
     tokens: Vec<Token>,
-    pos: usize,  // Current position in the token stream
+    pos: usize, // Current position in the token stream
 }
 
 impl ParserStream {
@@ -44,12 +44,12 @@ impl ParserStream {
                     self.next();
                     let right = self.parse_concat()?;
                     node = ASTNode::Union(Box::new(node), Box::new(right));
-                },
+                }
                 _ => {
                     break;
                 }
             };
-        };
+        }
 
         Some(node)
     }
@@ -63,10 +63,10 @@ impl ParserStream {
                 Token::Literal(_) | Token::LParen => {
                     let right = self.parse_repetition()?;
                     node = ASTNode::Concat(Box::new(node), Box::new(right));
-                },
+                }
                 _ => break,
             }
-        };
+        }
 
         Some(node)
     }
@@ -79,17 +79,17 @@ impl ParserStream {
             Some(Token::Star) => {
                 self.next();
                 node = ASTNode::Star(Box::new(node));
-            },
+            }
             Some(Token::Plus) => {
                 self.next();
                 node = ASTNode::Plus(Box::new(node));
-            },
+            }
             Some(Token::Optional) => {
                 self.next();
                 node = ASTNode::Optional(Box::new(node));
-            },
-            _ => {},
-        };
+            }
+            _ => {}
+        }
 
         Some(node)
     }
@@ -97,7 +97,7 @@ impl ParserStream {
     // parse literal, or group
     fn parse_base(&mut self) -> Option<ASTNode> {
         match self.next()? {
-            Token::Literal(l) => { Some(ASTNode::Literal(*l)) },
+            Token::Literal(l) => Some(ASTNode::Literal(*l)),
             Token::LParen => {
                 let expr = self.parse_regex()?;
                 match self.next()? {
@@ -105,9 +105,9 @@ impl ParserStream {
                     _ => {
                         println!("Expected closing parenthesis");
                         None
-                    },
+                    }
                 }
-            },
+            }
             _ => None,
         }
     }
@@ -138,7 +138,13 @@ mod tests {
         let mut p = ParserStream::new("a|b");
         let ast = p.parse_regex();
 
-        assert_eq!(ast, Some(ASTNode::Union(Box::new(ASTNode::Literal('a')), Box::new(ASTNode::Literal('b')))));
+        assert_eq!(
+            ast,
+            Some(ASTNode::Union(
+                Box::new(ASTNode::Literal('a')),
+                Box::new(ASTNode::Literal('b'))
+            ))
+        );
     }
 
     #[test]
@@ -146,7 +152,13 @@ mod tests {
         let mut p = ParserStream::new("ab");
         let ast = p.parse_regex();
 
-        assert_eq!(ast, Some(ASTNode::Concat(Box::new(ASTNode::Literal('a')), Box::new(ASTNode::Literal('b')))));
+        assert_eq!(
+            ast,
+            Some(ASTNode::Concat(
+                Box::new(ASTNode::Literal('a')),
+                Box::new(ASTNode::Literal('b'))
+            ))
+        );
     }
 
     #[test]

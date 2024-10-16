@@ -1,12 +1,12 @@
 #[derive(PartialEq)]
 pub(crate) enum Token {
-    Literal(char),  // Single character
-    Star,           // *
-    Plus,           // +
-    Optional,       // ?
-    Union,          // |
-    LParen,         // (
-    RParen,         // )
+    Literal(char), // Single character
+    Star,          // *
+    Plus,          // +
+    Optional,      // ?
+    Union,         // |
+    LParen,        // (
+    RParen,        // )
 }
 
 impl Token {
@@ -20,7 +20,7 @@ impl Token {
                 '|' => tokens.push(Token::Union),
                 '(' => tokens.push(Token::LParen),
                 ')' => tokens.push(Token::RParen),
-                _   => tokens.push(Token::Literal(ch)),  // All other characters are literals
+                _ => tokens.push(Token::Literal(ch)), // All other characters are literals
             }
         }
         tokens
