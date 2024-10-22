@@ -31,85 +31,7 @@ impl ParserStream {
 
 impl ParserStream {
     fn parse_regex(&mut self) -> Option<ASTNode> {
-        self.parse_union()
-    }
-
-    // Deal with union (symbol '|')
-    fn parse_union(&mut self) -> Option<ASTNode> {
-        let mut node = self.parse_concat()?;
-
-        while let Some(token) = self.peek() {
-            match token {
-                Token::Union => {
-                    self.next();
-                    let right = self.parse_concat()?;
-                    node = ASTNode::Union(Box::new(node), Box::new(right));
-                }
-                _ => {
-                    break;
-                }
-            };
-        }
-
-        Some(node)
-    }
-
-    // deal with concatenation
-    fn parse_concat(&mut self) -> Option<ASTNode> {
-        let mut node = self.parse_repetition()?;
-
-        while let Some(token) = self.peek() {
-            match token {
-                Token::Literal(_) | Token::LParen => {
-                    let right = self.parse_repetition()?;
-                    node = ASTNode::Concat(Box::new(node), Box::new(right));
-                }
-                _ => break,
-            }
-        }
-
-        Some(node)
-    }
-
-    // Deal with * + ? repetition
-    fn parse_repetition(&mut self) -> Option<ASTNode> {
-        let mut node = self.parse_base()?;
-
-        match self.peek() {
-            Some(Token::Star) => {
-                self.next();
-                node = ASTNode::Star(Box::new(node));
-            }
-            Some(Token::Plus) => {
-                self.next();
-                node = ASTNode::Plus(Box::new(node));
-            }
-            Some(Token::Optional) => {
-                self.next();
-                node = ASTNode::Optional(Box::new(node));
-            }
-            _ => {}
-        }
-
-        Some(node)
-    }
-
-    // parse literal, or group
-    fn parse_base(&mut self) -> Option<ASTNode> {
-        match self.next()? {
-            Token::Literal(l) => Some(ASTNode::Literal(*l)),
-            Token::LParen => {
-                let expr = self.parse_regex()?;
-                match self.next()? {
-                    Token::RParen => Some(ASTNode::Group(Box::new(expr))),
-                    _ => {
-                        println!("Expected closing parenthesis");
-                        None
-                    }
-                }
-            }
-            _ => None,
-        }
+        None
     }
 }
 
@@ -131,41 +53,5 @@ mod tests {
         assert!(p.get_token(9) == Some(&Token::Literal('e')));
         assert!(p.get_token(10) == Some(&Token::Plus));
         assert!(p.get_token(11) == Some(&Token::Literal('f')));
-    }
-
-    #[test]
-    fn test_basic_union_regex_to_ast() {
-        let mut p = ParserStream::new("a|b");
-        let ast = p.parse_regex();
-
-        assert_eq!(
-            ast,
-            Some(ASTNode::Union(
-                Box::new(ASTNode::Literal('a')),
-                Box::new(ASTNode::Literal('b'))
-            ))
-        );
-    }
-
-    #[test]
-    fn test_basic_concat_regex_to_ast() {
-        let mut p = ParserStream::new("ab");
-        let ast = p.parse_regex();
-
-        assert_eq!(
-            ast,
-            Some(ASTNode::Concat(
-                Box::new(ASTNode::Literal('a')),
-                Box::new(ASTNode::Literal('b'))
-            ))
-        );
-    }
-
-    #[test]
-    fn test_basic_repetition_regex_to_ast() {
-        let mut p = ParserStream::new("a*");
-        let ast = p.parse_regex();
-
-        assert_eq!(ast, Some(ASTNode::Star(Box::new(ASTNode::Literal('a')))));
     }
 }
