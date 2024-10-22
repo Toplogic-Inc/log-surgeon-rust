@@ -1,4 +1,4 @@
-use super::ast_node::ast_node::ASTNode;
+use super::ast_node::ast_node::AstNode;
 use super::token::Token;
 
 pub struct ParserStream {
@@ -30,7 +30,7 @@ impl ParserStream {
 }
 
 impl ParserStream {
-    fn parse_regex(&mut self) -> Option<ASTNode> {
+    fn parse_regex(&mut self) -> Option<AstNode> {
         None
     }
 }
