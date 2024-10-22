@@ -1,83 +1,11 @@
 // #[derive(Debug)]
-
-#[derive(Debug)]
-pub(crate) struct ASTNodeLiteral {
-    m_value: char,
-}
-
-impl PartialEq for ASTNodeLiteral {
-    fn eq(&self, other: &Self) -> bool {
-        self.m_value == other.m_value
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct ASTNodeConcat {
-    m_op1: Box<ASTNode>,
-    m_op2: Box<ASTNode>,
-}
-
-impl PartialEq for ASTNodeConcat {
-    fn eq(&self, other: &Self) -> bool {
-        self.m_op1 == other.m_op1 && self.m_op2 == other.m_op2
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct ASTNodeUnion {
-    m_op1: Box<ASTNode>,
-    m_op2: Box<ASTNode>,
-}
-
-impl PartialEq for ASTNodeUnion {
-    fn eq(&self, other: &Self) -> bool {
-        self.m_op1 == other.m_op1 && self.m_op2 == other.m_op2
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct ASTNodeStar {
-    m_op1: Box<ASTNode>,
-}
-
-impl PartialEq for ASTNodeStar {
-    fn eq(&self, other: &Self) -> bool {
-        self.m_op1 == other.m_op1
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct ASTNodePlus {
-    m_op1: Box<ASTNode>,
-}
-
-impl PartialEq for ASTNodePlus {
-    fn eq(&self, other: &Self) -> bool {
-        self.m_op1 == other.m_op1
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct ASTNodeOptional {
-    m_op1: Box<ASTNode>,
-}
-
-impl PartialEq for ASTNodeOptional {
-    fn eq(&self, other: &Self) -> bool {
-        self.m_op1 == other.m_op1
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct ASTNodeGroup {
-    m_op1: Box<ASTNode>,
-}
-
-impl PartialEq for ASTNodeGroup {
-    fn eq(&self, other: &Self) -> bool {
-        self.m_op1 == other.m_op1
-    }
-}
+use super::ast_node_concat::ASTNodeConcat;
+use super::ast_node_group::ASTNodeGroup;
+use super::ast_node_literal::ASTNodeLiteral;
+use super::ast_node_optional::ASTNodeOptional;
+use super::ast_node_plus::ASTNodePlus;
+use super::ast_node_star::ASTNodeStar;
+use super::ast_node_union::ASTNodeUnion;
 
 pub(crate) enum ASTNode {
     Literal(ASTNodeLiteral),   // Single character literal
