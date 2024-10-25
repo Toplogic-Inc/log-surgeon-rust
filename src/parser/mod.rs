@@ -1,7 +1,4 @@
-// Only the parser module is public
-pub mod parser;
-
-// Keep parserUtil, Token, and ASTNode private
+// Keep Token, and ASTNode private and they will be used by parser in the future
 
 mod token;
 
