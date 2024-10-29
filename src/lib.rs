@@ -1,4 +1,5 @@
 pub mod parser;
+mod nfa;
 
 const VERSION: &str = "0.0.1";
 
