@@ -1,2 +1,2 @@
 // Keep ASTNode private and they will be used by parser in the future
-mod ast_node;
+pub(crate) mod ast_node;
