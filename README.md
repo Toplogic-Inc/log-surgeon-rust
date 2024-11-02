@@ -9,9 +9,9 @@ logs implemented using Rust.
 
 
 ## Motivation
-Today's large technology companies generate logs the magnitude of pegabytes per day as a critical
-source for runtime failure diagnostics and data analytics. In real-world production environment,
-logs can be split into two category: unstructured logs and structured logs, where unstructured logs
+Today's large technology companies generate logs the magnitude of petabytes per day as a critical
+source for runtime failure diagnostics and data analytics. In a real-world production environment,
+logs can be split into two categories: unstructured logs and structured logs, where unstructured logs
 usually consist of a timestamp and a raw text message (i.e.,[Hadoop logs][hadoop-logs]), and
 structured logs are normally JSON records (i.e., [mongoDB logs][mongodb-logs]). [CLP][github-clp],
 is a distributed system designed to compress, search, and analyze large-scale log data. It provides
@@ -46,11 +46,11 @@ structure that JSON format provides. Otherwise, it might need a complicated regu
 extract the number from the raw-text log message. Unfortunately, it is impossible to deprecate 
 unstructured logging infrastructures in any real-world software systems for the following reasons:
 - Unstructured logs are more run-time-efficient: it does not introduce overhead of structuring data.
-- Legacy issues: Legacy issues: real-world software systems use countless software components; some
+- Legacy issues: real-world software systems use countless software components; some
   may not be compatible with structured logging infrastructure.
 
 Hence, the high-level motivation of our project has been formed: how to improve the analyzability of
-unstructured logs to make it as usable as structured logs? The scope of this problem is very wide,
+unstructured logs to make it as usable as structured logs? The scope of this problem is vast,
 and we will focus on one aspect: log parsing. CLP has introduced an innovative way of handling
 unstructured logs. The basic idea behind is to find the static text and variables in a raw text log
 message, where the static text is like a format string. For instance, the above log event can be
@@ -75,6 +75,16 @@ to extract named variables from raw text log messages efficiently according to u
 The objective of this project is to fill the gap in the Rust ecosystem for a high-performance log parsing library 
 specifically designed for multi-schema matching. There are several key features or stages in the log parsing process: Tokenization,
 Parsing to AST, Non-deterministic Finite Automata (NFA) construction, NFA to DFA conversion, and final result reporting.
+
+- Tokenization: This is the process of breaking a raw text log message into a sequence of tokens.
+- Parsing to AST: This is the process of converting the tokenized log message into an Abstract Syntax Tree (AST). AST is a tree
+that is used to represent the syntactic structure of the log message which is easier for the following stages to process than
+a raw text string.
+- NFA construction: This is the process of constructing a Non-deterministic Finite Automata (NFA) from the AST. Converting from AST 
+to NFA is the first step in the process of processing a regular expression.
+- NFA to DFA conversion: This is the process of converting the NFA to a Deterministic Finite Automata (DFA). Since NFA
+is more expensive to simulate than DFA, this stage is crucial and critical for performance.
+- Final result reporting: This is the process of reporting the final result of the log parsing process.
 
 [Zhihao Lin][github-zhihao] will be working on the Tokenization and Parsing to AST stages.
 
