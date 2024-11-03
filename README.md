@@ -74,8 +74,8 @@ safe and high-performant regular expression engine specialized for unstructured 
 to extract named variables from raw text log messages efficiently according to user-defined schema.
 
 ## Objective and Key Features
-The objective of this project is to fill the gap explained in the motivation above. We shall deliver
-a high-performance and memory-safe log parsing library using Rust. The project should consist of the
+The objective of this project is to fill the gap explained in the motivation above in the current Rust ecosystem.
+We shall deliver a high-performance and memory-safe log parsing library using Rust. The project should consist of the
 core regex engine, the parser, and the user-oriented log parsing interface.
 
 The core regex engine is designed for high-performance schema matching and variable extraction. 
@@ -83,7 +83,7 @@ User-defined schemas will be described in regular expressions, and the underlyin
 the schema regular expressions into abstract syntax trees (AST), convert ASTs into non-deterministic
 finite automata ([NFA][wiki-nfa]), and merge all NFAs into one large deterministic finite automata
 ([DFA][wiki-dfa]). This single-DFA design will ensure the execution time is bounded by the length of
-input stream. If time allows, we will even implement [tagged DFA][wiki-tagged-dfa] to make
+the input stream. If time allows, we will even implement [tagged DFA][wiki-tagged-dfa] to make
 the schema more powerful.
 
 The parser has two components:
