@@ -56,9 +56,11 @@ unstructured logs. The basic idea behind is to find the static text and variable
 message, where the static text is like a format string. For instance, the above log event can be
 interpreted as the following:
 ```Python
-print(f"{timestamp}, {pid}, {tid}, {priority}, {tag}: Removed item: AppOpItem(Op code={op_code}, UID={uid})")
+print(
+  f"{timestamp}, {pid}, {tid}, {priority}, {tag}: Removed item: AppOpItem(Op code={op}, UID={uid})"
+)
 ```
-`timestamp`, `pid`, `tid`, `priority`, `tag`, `op_code`, and `uid` are all variables. This provides
+`timestamp`, `pid`, `tid`, `priority`, `tag`, `op`, and `uid` are all variables. This provides
 some simple data structuring, however, it has a few limitations:
 - CLP's heuristic parser cannot parse logs based on user-defined schema. For example,
   `"Removed item"` above may be a variable, but CLP's heuristic parser cannot handle that.
@@ -72,28 +74,37 @@ safe and high-performant regular expression engine specialized for unstructured 
 to extract named variables from raw text log messages efficiently according to user-defined schema.
 
 ## Objective and Key Features
-The objective of this project is to fill the gap in the Rust ecosystem for a high-performance log parsing library 
-specifically designed for multi-schema matching. There are several key features or stages in the log parsing process: Tokenization,
-Parsing to AST, Non-deterministic Finite Automata (NFA) construction, NFA to DFA conversion, and final result reporting.
+The objective of this project is to fill the gap explained in the motivation above. We shall deliver
+a high-performance and memory-safe log parsing library using Rust. The project should consist of the
+core regex engine, the parser, and the user-oriented log parsing interface.
 
-- Tokenization: This is the process of breaking a raw text log message into a sequence of tokens.
-- Parsing to AST: This is the process of converting the tokenized log message into an Abstract Syntax Tree (AST). AST is a tree
-that is used to represent the syntactic structure of the log message which is easier for the following stages to process than
-a raw text string.
-- NFA construction: This is the process of constructing a Non-deterministic Finite Automata (NFA) from the AST. Converting from AST 
-to NFA is the first step in the process of processing a regular expression.
-- NFA to DFA conversion: This is the process of converting the NFA to a Deterministic Finite Automata (DFA). Since NFA
-is more expensive to simulate than DFA, this stage is crucial and critical for performance.
-- Final result reporting: This is the process of reporting the final result of the log parsing process.
+The core regex engine is designed for high-performance schema matching and variable extraction. 
+User-defined schemas will be described in regular expressions, and the underlying engine will parse
+the schema regular expressions into abstract syntax trees (AST), convert ASTs into non-deterministic
+finite automata ([NFA][wiki-nfa]), and merge all NFAs into one large deterministic finite automata
+([DFA][wiki-dfa]). This single-DFA design will ensure the execution time is bounded by the length of
+input stream. If time allows, we will even implement [tagged DFA][wiki-tagged-dfa] to make
+the schema more powerful.
 
-[Zhihao Lin][github-zhihao] will be working on the Tokenization and Parsing to AST stages.
+The parser has two components:
+- The schema parser, which is an implementation of [LALR parser][wiki-lalr], parses user-input
+schema into regex AST.
+- The log parser, which operates similarly to a simple compiler, uses a lexer to process the input 
+text and emits tokens, and makes decisions based on emitted tokens using the core regex engine.
 
-[Siwei (Louis) He][github-siwei] will be working on the Non-deterministic Finite Automata (NFA) construction,
-and the NFA to DFA conversion stage. 
+The log parsing interface will provide user programmatic APIs to:
+- Specify inputs (variable schemas) to configure the regex engine
+- Feed input stream to the log parser using the configured regex engine
+- Retrieve outputs (parsed log events structured according to the user schema) from the parser
 
-There will be integration among the stages to ensure the final result is correct and efficient. The integration work will be distributed
-between the two team members.
+[Zhihao Lin][github-zhihao] will be working on the parser implementation.
 
+[Siwei (Louis) He][github-siwei] will be working on the core regex engine implementation. 
+
+Both will be working on the log parsing interface.
+
+One will review the other's implementation through GitHub's Pull Request for the purpose of the
+correctness and efficiency.
 
 ## Tentative Plan and Status
 1. **Louis** 
@@ -110,13 +121,11 @@ between the two team members.
 
 2. **Zhihao**
 
-| Time                  | Tentative Schedule | Status      | 
-|-----------------------|--------------------|-------------|
-| Nov. 1st ~ Nov. 8th   |                    | Not started |
-| Nov. 8th ~ Nov. 15th  |                    | Not started |
-| Nov. 15th ~ Nov. 22nd |                    | Not started |
-| Nov. 22nd ~ Nov. 29th |                    | Not started |
-| Nov. 29th ~ Dec. 6th  |                    | Not started |
+| Time                  | Tentative Schedule                                          | Status      | 
+|-----------------------|-------------------------------------------------------------|-------------|
+| Nov. 1st ~ Nov. 15th  | Implement LALR parser for schema parsing and AST generation | Not started |
+| Nov. 15th ~ Nov. 29nd | Implement lexer for input stream processing                 | Not started |
+| Nov. 29nd ~ Dec. 6th  | Formalize log parsing APIs                                  | Not started |
 
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
 [clp-s-paper]: https://www.usenix.org/system/files/osdi24-wang-rui.pdf
@@ -126,3 +135,7 @@ between the two team members.
 [hadoop-logs]: https://zenodo.org/records/7114847
 [home-page]: https://github.com/Toplogic-Inc/log-surgeon-rust
 [mongodb-logs]: https://zenodo.org/records/11075361
+[wiki-dfa]: https://en.wikipedia.org/wiki/Deterministic_finite_automaton
+[wiki-lalr]: https://en.wikipedia.org/wiki/LALR_parser
+[wiki-nfa]: https://en.wikipedia.org/wiki/Nondeterministic_finite_automaton
+[wiki-tagged-dfa]: https://en.wikipedia.org/wiki/Tagged_Deterministic_Finite_Automaton
