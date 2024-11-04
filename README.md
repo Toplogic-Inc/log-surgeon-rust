@@ -3,12 +3,12 @@ Project Link: [Homepage][home-page]
 
 ## Team Members
 - Student 1: Siwei (Louis) He, 1004220960
-- Student 2: Zhihao Lin, 
+- Student 2: Zhihao Lin, 1005071299
 
 ## Introduction
 
 `log-surgeon` is a library for high-performance parsing of unstructured text
-logs implemented using Rust. 
+logs implemented using Rust.
 
 
 ## Motivation
@@ -46,7 +46,7 @@ manually structured in the following way:
 Intuitively, the structured version makes it easier to query relevant data fields. For example, if
 an application wants to query `UID=1000`, it can take advantage of the tree-style key-value pair
 structure that JSON format provides. Otherwise, it might need a complicated regular expression to
-extract the number from the raw-text log message. Unfortunately, it is impossible to deprecate 
+extract the number from the raw-text log message. Unfortunately, it is impossible to deprecate
 unstructured logging infrastructures in any real-world software systems for the following reasons:
 - Unstructured logs are more run-time-efficient: it does not introduce overhead of structuring data.
 - Legacy issues: real-world software systems use countless software components; some
@@ -82,7 +82,7 @@ Rust ecosystem. We shall deliver a high-performance and memory-safe log parsing 
 The project should consist of the core regex engine, the parser, and the user-oriented log parsing
 interface.
 
-The core regex engine is designed for high-performance schema matching and variable extraction. 
+The core regex engine is designed for high-performance schema matching and variable extraction.
 User-defined schemas will be described in regular expressions, and the underlying engine will parse
 the schema regular expressions into abstract syntax trees (AST), convert ASTs into non-deterministic
 finite automata ([NFA][wiki-nfa]), and merge all NFAs into one large deterministic finite automata
@@ -93,7 +93,7 @@ the schema more powerful.
 The parser has two components:
 - The schema parser, which is an implementation of [LALR parser][wiki-lalr], parses user-input
 schema into regex AST.
-- The log parser, which operates similarly to a simple compiler, uses a lexer to process the input 
+- The log parser, which operates similarly to a simple compiler, uses a lexer to process the input
 text and emits tokens, and makes decisions based on emitted tokens using the core regex engine.
 
 The log parsing interface will provide user programmatic APIs to:
@@ -103,7 +103,7 @@ The log parsing interface will provide user programmatic APIs to:
 
 [Zhihao Lin][github-zhihao] will be working on the parser implementation.
 
-[Siwei (Louis) He][github-siwei] will be working on the core regex engine implementation. 
+[Siwei (Louis) He][github-siwei] will be working on the core regex engine implementation.
 
 Both will be working on the log parsing interface.
 
@@ -111,9 +111,9 @@ One will review the other's implementation through GitHub's Pull Request for the
 correctness and efficiency.
 
 ## Tentative Plan and Status
-1. **Louis** 
+1. **Louis**
 
-| Time                  | Tentative Schedule                          | Status      | 
+| Time                  | Tentative Schedule                          | Status      |
 |-----------------------|---------------------------------------------|-------------|
 | Oct. 18th ~ Oct. 25th | Complete AST common structs for the project | Done        |
 | Oct. 25th ~ Nov. 8th  | Complete NFA structs and research           | On track    |
@@ -125,7 +125,7 @@ correctness and efficiency.
 
 2. **Zhihao**
 
-| Time                  | Tentative Schedule                                          | Status      | 
+| Time                  | Tentative Schedule                                          | Status      |
 |-----------------------|-------------------------------------------------------------|-------------|
 | Nov. 1st ~ Nov. 15th  | Implement LALR parser for schema parsing and AST generation | Not started |
 | Nov. 15th ~ Nov. 29nd | Implement lexer for input stream processing                 | Not started |
