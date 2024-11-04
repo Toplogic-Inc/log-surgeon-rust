@@ -1,6 +1,9 @@
 # log-surgeon: A performant log parsing library
-
 Project Link: [Homepage][home-page]
+
+## Team Members
+- Student 1: Siwei (Louis) He, 1004220960
+- Student 2: Zhihao Lin, 
 
 ## Introduction
 
