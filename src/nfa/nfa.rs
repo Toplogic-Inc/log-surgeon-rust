@@ -1,17 +1,16 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 
 use crate::parser::ast_node::ast_node::AstNode;
-use crate::parser::ast_node::ast_node_literal::AstNodeLiteral;
 use crate::parser::ast_node::ast_node_concat::AstNodeConcat;
-use crate::parser::ast_node::ast_node_union::AstNodeUnion;
-use crate::parser::ast_node::ast_node_star::AstNodeStar;
-use crate::parser::ast_node::ast_node_plus::AstNodePlus;
+use crate::parser::ast_node::ast_node_literal::AstNodeLiteral;
 use crate::parser::ast_node::ast_node_optional::AstNodeOptional;
+use crate::parser::ast_node::ast_node_plus::AstNodePlus;
+use crate::parser::ast_node::ast_node_star::AstNodeStar;
+use crate::parser::ast_node::ast_node_union::AstNodeUnion;
 
-#[derive(Clone, Debug)]
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct State(usize);
 
 struct Transition {
@@ -22,7 +21,11 @@ struct Transition {
 
 impl Debug for Transition {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?} -> {:?}, symbol: {:?}", self.from, self.to, self.symbol)
+        write!(
+            f,
+            "{:?} -> {:?}, symbol: {:?}",
+            self.from, self.to, self.symbol
+        )
     }
 }
 
@@ -34,7 +37,6 @@ struct NFA {
 }
 
 impl NFA {
-
     fn from_ast(ast: &AstNode) -> Self {
         match ast {
             AstNode::Literal(ast_node) => {
@@ -68,7 +70,10 @@ impl NFA {
                 // the initial state of the result NFA is the initial state of the left hand side NFA, so no op
                 nfa.accept = rhs_nfa.accept.clone();
                 for (from, transitions) in rhs_nfa.transitions {
-                    nfa.transitions.entry(from).or_insert(vec![]).extend(transitions);
+                    nfa.transitions
+                        .entry(from)
+                        .or_insert(vec![])
+                        .extend(transitions);
                 }
 
                 nfa
@@ -88,7 +93,10 @@ impl NFA {
                     nfa.add_epsilon_transition(sub_nfa.accept.clone(), accept.clone());
                     nfa.states = nfa.states.union(&sub_nfa.states).cloned().collect();
                     for (from, transitions) in sub_nfa.transitions.drain() {
-                        nfa.transitions.entry(from).or_insert(vec![]).extend(transitions);
+                        nfa.transitions
+                            .entry(from)
+                            .or_insert(vec![])
+                            .extend(transitions);
                     }
                     offset += sub_nfa.states.len();
                 };
@@ -120,7 +128,10 @@ impl NFA {
 
                 nfa.states = nfa.states.union(&sub_nfa.states).cloned().collect();
                 for (from, transitions) in sub_nfa.transitions {
-                    nfa.transitions.entry(from).or_insert(vec![]).extend(transitions);
+                    nfa.transitions
+                        .entry(from)
+                        .or_insert(vec![])
+                        .extend(transitions);
                 }
 
                 nfa
@@ -144,11 +155,13 @@ impl NFA {
 
                 nfa.states = nfa.states.union(&sub_nfa.states).cloned().collect();
                 for (from, transitions) in sub_nfa.transitions {
-                    nfa.transitions.entry(from).or_insert(vec![]).extend(transitions);
+                    nfa.transitions
+                        .entry(from)
+                        .or_insert(vec![])
+                        .extend(transitions);
                 }
 
                 nfa
-
             }
             AstNode::Optional(ast_node) => {
                 let mut sub_nfa = NFA::from_ast(ast_node.get_op1());
@@ -169,14 +182,15 @@ impl NFA {
 
                 nfa.states.extend(sub_nfa.states);
                 for (from, transitions) in sub_nfa.transitions {
-                    nfa.transitions.entry(from).or_insert(vec![]).extend(transitions);
+                    nfa.transitions
+                        .entry(from)
+                        .or_insert(vec![])
+                        .extend(transitions);
                 }
 
                 nfa
             }
-            AstNode::Group(ast_node) => {
-                NFA::from_ast(ast_node.get_op1())
-            }
+            AstNode::Group(ast_node) => NFA::from_ast(ast_node.get_op1()),
         }
     }
 
@@ -194,7 +208,10 @@ impl NFA {
     }
 
     fn add_transition(&mut self, transition: Transition) {
-        self.transitions.entry(transition.from.clone()).or_insert(vec![]).push(transition);
+        self.transitions
+            .entry(transition.from.clone())
+            .or_insert(vec![])
+            .push(transition);
     }
 
     fn add_epsilon_transition(&mut self, from: State, to: State) {
@@ -226,13 +243,14 @@ impl NFA {
         let mut updated_transitions: HashMap<State, Vec<Transition>> = HashMap::new();
         for (start, transitions) in self.transitions.iter() {
             let updated_start = State(start.0 + offset);
-            let updated_transitions_list: Vec<Transition> = transitions.iter().map(|transition| {
-                Transition {
+            let updated_transitions_list: Vec<Transition> = transitions
+                .iter()
+                .map(|transition| Transition {
                     from: State(transition.from.0 + offset),
                     to: State(transition.to.0 + offset),
                     symbol: transition.symbol,
-                }
-            }).collect();
+                })
+                .collect();
             updated_transitions.insert(updated_start, updated_transitions_list);
         }
 
@@ -242,7 +260,11 @@ impl NFA {
 
 impl Debug for NFA {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "NFA( start: {:?}, accept: {:?}, states: {:?}, transitions: {{\n", self.start, self.accept, self.states)?;
+        write!(
+            f,
+            "NFA( start: {:?}, accept: {:?}, states: {:?}, transitions: {{\n",
+            self.start, self.accept, self.states
+        )?;
         for (state, transitions) in &self.transitions {
             write!(f, "\t{:?}:\n", state)?;
             for transition in transitions {
@@ -341,7 +363,7 @@ mod tests {
             AstNode::Literal(AstNodeLiteral::new('b')),
         ));
         let nfa = NFA::from_ast(&ast);
-        assert_eq!(nfa.states.len(), 6);      // 6 states in total
+        assert_eq!(nfa.states.len(), 6); // 6 states in total
         assert_eq!(nfa.transitions.len(), 5); // 5 nodes have transitions
 
         assert_eq!(nfa.start, State(0));
@@ -381,9 +403,7 @@ mod tests {
 
     #[test]
     fn nfa_from_ast_star() {
-        let ast = AstNode::Star(AstNodeStar::new(
-            AstNode::Literal(AstNodeLiteral::new('a')),
-        ));
+        let ast = AstNode::Star(AstNodeStar::new(AstNode::Literal(AstNodeLiteral::new('a'))));
         let nfa = NFA::from_ast(&ast);
         assert_eq!(nfa.states.len(), 4);
         assert_eq!(nfa.transitions.len(), 3); // except the accept state, all other states have transitions
@@ -415,9 +435,7 @@ mod tests {
 
     #[test]
     fn nfa_from_ast_plus() {
-        let ast = AstNode::Plus(AstNodePlus::new(
-            AstNode::Literal(AstNodeLiteral::new('a')),
-        ));
+        let ast = AstNode::Plus(AstNodePlus::new(AstNode::Literal(AstNodeLiteral::new('a'))));
         let nfa = NFA::from_ast(&ast);
         assert_eq!(nfa.states.len(), 4);
         assert_eq!(nfa.transitions.len(), 3); // except the accept state, all other states have transitions
@@ -447,9 +465,9 @@ mod tests {
 
     #[test]
     fn nfa_from_ast_optional() {
-        let ast = AstNode::Optional(AstNodeOptional::new(
-            AstNode::Literal(AstNodeLiteral::new('a')),
-        ));
+        let ast = AstNode::Optional(AstNodeOptional::new(AstNode::Literal(AstNodeLiteral::new(
+            'a',
+        ))));
         let nfa = NFA::from_ast(&ast);
         assert_eq!(nfa.states.len(), 4);
         assert_eq!(nfa.transitions.len(), 3); // except the accept state, all other states have transitions
@@ -480,9 +498,9 @@ mod tests {
     #[test]
     fn nfa_simple_debug_print() {
         let ast = AstNode::Concat(AstNodeConcat::new(
-            AstNode::Optional(AstNodeOptional::new(
-            AstNode::Literal(AstNodeLiteral::new('a')),
-        )),
+            AstNode::Optional(AstNodeOptional::new(AstNode::Literal(AstNodeLiteral::new(
+                'a',
+            )))),
             AstNode::Literal(AstNodeLiteral::new('b')),
         ));
         let nfa = NFA::from_ast(&ast);
