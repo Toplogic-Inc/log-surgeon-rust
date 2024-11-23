@@ -1,8 +1,8 @@
 pub mod ast_node;
-mod ast_node_concat;
-mod ast_node_group;
-mod ast_node_literal;
-mod ast_node_optional;
-mod ast_node_plus;
-mod ast_node_star;
-mod ast_node_union;
+pub mod ast_node_concat;
+pub mod ast_node_group;
+pub mod ast_node_literal;
+pub mod ast_node_optional;
+pub mod ast_node_plus;
+pub mod ast_node_star;
+pub mod ast_node_union;
