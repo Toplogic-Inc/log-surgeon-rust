@@ -17,6 +17,7 @@ struct Transition {
     from: State,
     to: State,
     symbol: Option<char>,
+    tag: i16,
 }
 
 impl Debug for Transition {
@@ -49,6 +50,7 @@ impl NFA {
                     from: start.clone(),
                     to: accept.clone(),
                     symbol: Some(ast_node.get_value()),
+                    tag: -1,
                 });
                 nfa
             }
@@ -219,6 +221,7 @@ impl NFA {
             from,
             to,
             symbol: None,
+            tag: -1,
         });
     }
 
@@ -249,6 +252,7 @@ impl NFA {
                     from: State(transition.from.0 + offset),
                     to: State(transition.to.0 + offset),
                     symbol: transition.symbol,
+                    tag: transition.tag,
                 })
                 .collect();
             updated_transitions.insert(updated_start, updated_transitions_list);
@@ -288,6 +292,7 @@ mod tests {
             from: State(0),
             to: State(1),
             symbol: Some('a'),
+            tag: -1,
         });
 
         nfa.offset_states(2);
