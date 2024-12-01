@@ -11,9 +11,9 @@ use crate::parser::ast_node::ast_node_star::AstNodeStar;
 use crate::parser::ast_node::ast_node_union::AstNodeUnion;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-struct State(usize);
+pub(crate) struct State(pub usize);
 
-struct Transition {
+pub struct Transition {
     from: State,
     to: State,
     symbol: Option<char>,
@@ -30,13 +30,33 @@ impl Debug for Transition {
     }
 }
 
-struct NFA {
+impl Transition {
+    pub fn new(from: State, to: State, symbol: Option<char>, tag: i16) -> Self {
+        Transition {
+            from,
+            to,
+            symbol,
+            tag,
+        }
+    }
+
+    pub fn get_symbol(&self) -> Option<char> {
+        self.symbol
+    }
+
+    pub fn get_to_state(&self) -> State {
+        self.to.clone()
+    }
+}
+
+pub(crate) struct NFA {
     start: State,
     accept: State,
     states: HashSet<State>,
     transitions: HashMap<State, Vec<Transition>>,
 }
 
+// NFA implementation for NFA construction from AST
 impl NFA {
     fn from_ast(ast: &AstNode) -> Self {
         match ast {
@@ -196,7 +216,7 @@ impl NFA {
         }
     }
 
-    fn new(start: State, accept: State) -> Self {
+    pub fn new(start: State, accept: State) -> Self {
         NFA {
             start,
             accept,
@@ -276,6 +296,76 @@ impl Debug for NFA {
             }
         }
         write!(f, "}} )")
+    }
+}
+
+// NFA implementation for NFA to dfa conversion helper functions
+impl NFA {
+    pub fn epsilon_closure(&self, states: &Vec<State>) -> Vec<State>{
+        let mut closure = states.clone();
+        let mut stack = states.clone();
+
+        while let Some(state) = stack.pop() {
+            let transitions = self.transitions.get(&state);
+            if transitions.is_none() {
+                continue;
+            }
+
+            for transition in transitions.unwrap() {
+                if transition.symbol.is_none() {
+                    let to_state = transition.to.clone();
+                    if !closure.contains(&to_state) {
+                        closure.push(to_state.clone());
+                        stack.push(to_state);
+                    }
+                }
+            }
+        }
+
+        closure
+    }
+
+    // Static function to get the combined state names
+    pub fn get_combined_state_names(states: &Vec<State>) -> String {
+        let mut names = states.iter().map(|state| state.0.to_string()).collect::<Vec<String>>();
+        names.sort();
+        names.join(",")
+    }
+}
+
+// Getter functions for NFA
+impl NFA {
+    pub fn get_start(&self) -> State {
+        self.start.clone()
+    }
+
+    pub fn get_accept(&self) -> State {
+        self.accept.clone()
+    }
+
+    pub fn get_transitions(&self) -> &HashMap<State, Vec<Transition>> {
+        &self.transitions
+    }
+
+    pub fn get_transitions_from_state(&self, state: &State) -> Option<&Vec<Transition>> {
+        self.transitions.get(state)
+    }
+}
+
+// Test use only functions for DFA
+
+#[cfg(test)]
+impl NFA {
+    pub fn test_extern_add_state(&mut self, state: State) {
+        self.add_state(state);
+    }
+
+    pub fn test_extern_add_transition(&mut self, transition: Transition) {
+        self.add_transition(transition);
+    }
+
+    pub fn test_extern_add_epsilon_transition(&mut self, from: State, to: State) {
+        self.add_epsilon_transition(from, to);
     }
 }
 
@@ -510,5 +600,40 @@ mod tests {
         ));
         let nfa = NFA::from_ast(&ast);
         println!("{:?}", nfa);
+    }
+
+    #[test]
+    fn nfa_epsilon_closure() {
+        let mut nfa = NFA::new(State(0), State(3));
+        for i in 0..=10 {
+            nfa.add_state(State(i));
+        }
+        nfa.add_epsilon_transition(State(0), State(1));
+        nfa.add_epsilon_transition(State(1), State(2));
+        nfa.add_epsilon_transition(State(0), State(2));
+        nfa.add_transition(Transition {
+            from: State(2),
+            to: State(3),
+            symbol: Some('a'),
+            tag: -1,
+        });
+        nfa.add_epsilon_transition(State(3), State(5));
+        nfa.add_epsilon_transition(State(3), State(4));
+        nfa.add_epsilon_transition(State(4), State(5));
+        nfa.add_epsilon_transition(State(5), State(3));
+
+        let closure = nfa.epsilon_closure(&vec![State(0)]);
+        assert_eq!(closure.len(), 3);
+        assert_eq!(closure.contains(&State(0)), true);
+        assert_eq!(closure.contains(&State(1)), true);
+        assert_eq!(closure.contains(&State(2)), true);
+        assert_eq!(closure.contains(&State(3)), false);
+        assert_eq!(closure.contains(&State(10)), false);
+
+        let closure = nfa.epsilon_closure(&vec![State(3)]);
+        assert_eq!(closure.len(), 3);
+        assert_eq!(closure.contains(&State(3)), true);
+        assert_eq!(closure.contains(&State(4)), true);
+        assert_eq!(closure.contains(&State(5)), true);
     }
 }

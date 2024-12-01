@@ -1,1 +1,1 @@
-mod nfa;
+pub mod nfa;
