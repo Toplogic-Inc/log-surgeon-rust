@@ -1,4 +1,3 @@
-mod dfa;
 mod nfa;
 pub mod parser;
 
