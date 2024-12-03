@@ -301,7 +301,7 @@ impl Debug for NFA {
 
 // NFA implementation for NFA to dfa conversion helper functions
 impl NFA {
-    pub fn epsilon_closure(&self, states: &Vec<State>) -> Vec<State>{
+    pub fn epsilon_closure(&self, states: &Vec<State>) -> Vec<State> {
         let mut closure = states.clone();
         let mut stack = states.clone();
 
@@ -327,7 +327,10 @@ impl NFA {
 
     // Static function to get the combined state names
     pub fn get_combined_state_names(states: &Vec<State>) -> String {
-        let mut names = states.iter().map(|state| state.0.to_string()).collect::<Vec<String>>();
+        let mut names = states
+            .iter()
+            .map(|state| state.0.to_string())
+            .collect::<Vec<String>>();
         names.sort();
         names.join(",")
     }
