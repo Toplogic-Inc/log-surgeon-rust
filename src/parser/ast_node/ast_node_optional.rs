@@ -10,6 +10,10 @@ impl AstNodeOptional {
             m_op1: Box::new(p0),
         }
     }
+
+    pub(crate) fn get_op1(&self) -> &AstNode {
+        &self.m_op1
+    }
 }
 
 impl PartialEq for AstNodeOptional {

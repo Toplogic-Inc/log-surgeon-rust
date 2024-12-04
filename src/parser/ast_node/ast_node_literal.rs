@@ -8,6 +8,10 @@ impl AstNodeLiteral {
     pub(crate) fn new(p0: char) -> AstNodeLiteral {
         AstNodeLiteral { m_value: p0 }
     }
+
+    pub(crate) fn get_value(&self) -> char {
+        self.m_value
+    }
 }
 
 impl PartialEq for AstNodeLiteral {

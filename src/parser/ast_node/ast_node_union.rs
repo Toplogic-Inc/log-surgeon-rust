@@ -12,6 +12,14 @@ impl AstNodeUnion {
             m_op2: Box::new(p1),
         }
     }
+
+    pub(crate) fn get_op1(&self) -> &AstNode {
+        &self.m_op1
+    }
+
+    pub(crate) fn get_op2(&self) -> &AstNode {
+        &self.m_op2
+    }
 }
 
 impl PartialEq for AstNodeUnion {
