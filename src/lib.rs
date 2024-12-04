@@ -1,3 +1,4 @@
+mod error_handling;
 mod nfa;
 pub mod parser;
 
