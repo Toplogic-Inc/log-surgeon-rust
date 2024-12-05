@@ -23,6 +23,7 @@ pub(crate) struct DFA {
     accept: Vec<State>,
     states: HashSet<State>,
     transitions: HashMap<State, HashMap<char, Transition>>, // from_state -> symbol -> to_state
+    dfa_to_accepted_nfa_state_mapping: Option<HashMap<State, Vec<(usize, crate::nfa::nfa::State)>>>, // to determine which NFA gets matched
 }
 
 impl DFA {
@@ -38,6 +39,7 @@ impl DFA {
             accept: accept_states,
             states: _states,
             transitions: HashMap::new(),
+            dfa_to_accepted_nfa_state_mapping: None,
         }
     }
 
@@ -64,23 +66,23 @@ impl DFA {
             );
     }
 
-    fn simulate(&self, input: &str) -> bool {
+    fn simulate(&self, input: &str) -> (Option<HashSet<usize>>, bool) {
         let mut current_state = self.start.clone();
 
         // simulate the dfa
         for symbol in input.chars() {
             let transitions = self.transitions.get(&current_state);
             if transitions.is_none() {
-                return false;
+                return (None, false);
             }
             let transitions = transitions.unwrap();
             let transition = transitions.get(&symbol);
             if transition.is_none() {
-                return false;
+                return (None, false);
             }
             let next_state = Some(transition.unwrap().to_state.clone());
             if next_state.is_none() {
-                return false;
+                return (None, false);
             }
             current_state = next_state.unwrap();
         }
@@ -88,11 +90,23 @@ impl DFA {
         // check if the current state is an accept state
         for accept_state in self.accept.iter() {
             if current_state == *accept_state {
-                return true;
+                if let Some(dfa_to_accepted_nfa_state_mapping) = &self.dfa_to_accepted_nfa_state_mapping {
+                    let nfa_states: &Vec<(usize, crate::nfa::nfa::State)> = dfa_to_accepted_nfa_state_mapping.get(&current_state).unwrap();
+
+                    let mut nfa_ids = HashSet::new();
+                    for (nfa_id, state) in nfa_states.iter() {
+                        nfa_ids.insert(*nfa_id);
+                    }
+
+                    return (Some(nfa_ids), true);
+                }
+
+
+                return (None, true);
             }
         }
 
-        false
+        (None, false)
     }
 }
 
@@ -217,6 +231,7 @@ impl DFA {
             accept: dfa_accept_states.into_iter().collect(),
             states: dfa_states,
             transitions: dfa_transitions,
+            dfa_to_accepted_nfa_state_mapping: None,
         }
     }
 
@@ -227,6 +242,8 @@ impl DFA {
 
         let mut dfa_states: HashSet<State> = HashSet::new();
         let mut dfa_to_nfa_state_mapping: HashMap<State, Vec<(usize, crate::nfa::nfa::State)>> =
+            HashMap::new();
+        let mut dfa_to_accepted_nfa_state_mapping: HashMap<State, Vec<(usize, crate::nfa::nfa::State)>> =
             HashMap::new();
         let mut dfa_accept_states = HashSet::new();
         let mut dfa_transitions: HashMap<State, HashMap<char, Transition>> = HashMap::new();
@@ -259,6 +276,7 @@ impl DFA {
             // Note: tIf any of the NFA states in this dfa state is an accept state, then this dfa state is an accept state
             for (idx, nfa_state) in nfa_states.iter() {
                 if nfas.get(*idx).unwrap().get_accept() == *nfa_state {
+                    dfa_to_accepted_nfa_state_mapping.entry(dfa_state.clone()).or_insert_with(Vec::new).push((*idx, nfa_state.clone()));
                     dfa_accept_states.insert(dfa_state.clone());
                 }
             }
@@ -324,12 +342,14 @@ impl DFA {
             accept: dfa_accept_states.into_iter().collect(),
             states: dfa_states,
             transitions: dfa_transitions,
+            dfa_to_accepted_nfa_state_mapping: Some(dfa_to_accepted_nfa_state_mapping),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use crate::dfa::dfa::Tag::Start;
     use crate::dfa::dfa::{State, DFA};
     use crate::nfa::nfa::NFA;
@@ -343,10 +363,10 @@ mod tests {
         dfa.add_transition(start.clone(), 'a', accept.clone(), None);
         dfa.add_transition(accept.clone(), 'b', start.clone(), None);
 
-        assert_eq!(dfa.simulate("ab"), false);
-        assert_eq!(dfa.simulate("a"), true);
-        assert_eq!(dfa.simulate("b"), false);
-        assert_eq!(dfa.simulate("ba"), false);
+        assert_eq!(dfa.simulate("ab"), (None, false));
+        assert_eq!(dfa.simulate("a"), (None, true));
+        assert_eq!(dfa.simulate("b"), (None, false));
+        assert_eq!(dfa.simulate("ba"), (None, false));
     }
 
     #[cfg(test)]
@@ -504,11 +524,11 @@ mod tests {
         );
 
         // Check correctness given some examples
-        assert_eq!(dfa.simulate("a"), true);
-        assert_eq!(dfa.simulate("ab"), true);
-        assert_eq!(dfa.simulate("aa"), false);
-        assert_eq!(dfa.simulate("abb"), false);
-        assert_eq!(dfa.simulate("aba"), false);
+        assert_eq!(dfa.simulate("a"), (None, true));
+        assert_eq!(dfa.simulate("ab"), (None, true));
+        assert_eq!(dfa.simulate("aa"), (None, false));
+        assert_eq!(dfa.simulate("abb"), (None, false));
+        assert_eq!(dfa.simulate("aba"), (None, false));
     }
 
     #[test]
@@ -517,13 +537,13 @@ mod tests {
         let dfa = DFA::from_nfa(nfa);
 
         // Check correctness given some examples
-        assert_eq!(dfa.simulate("c"), true);
-        assert_eq!(dfa.simulate("cc"), true);
-        assert_eq!(dfa.simulate("ccc"), true);
-        assert_eq!(dfa.simulate("cccc"), true);
-        assert_eq!(dfa.simulate("ccccab"), false);
-        assert_eq!(dfa.simulate("cab"), false);
-        assert_eq!(dfa.simulate(""), true);
+        assert_eq!(dfa.simulate("c"), (None, true));
+        assert_eq!(dfa.simulate("cc"), (None, true));
+        assert_eq!(dfa.simulate("ccc"), (None, true));
+        assert_eq!(dfa.simulate("cccc"), (None, true));
+        assert_eq!(dfa.simulate("ccccab"), (None, false));
+        assert_eq!(dfa.simulate("cab"), (None, false));
+        assert_eq!(dfa.simulate(""), (None, true));
     }
 
     #[test]
@@ -532,14 +552,14 @@ mod tests {
         let dfa = DFA::from_nfa(nfa);
 
         // Check correctness given some examples
-        assert_eq!(dfa.simulate("c"), false);
-        assert_eq!(dfa.simulate("cc"), false);
-        assert_eq!(dfa.simulate("ccc"), false);
-        assert_eq!(dfa.simulate("ccccc"), false);
-        assert_eq!(dfa.simulate("cccccab"), true);
-        assert_eq!(dfa.simulate("cab"), true);
-        assert_eq!(dfa.simulate("ab"), false);
-        assert_eq!(dfa.simulate(""), false);
+        assert_eq!(dfa.simulate("c"), (None, false));
+        assert_eq!(dfa.simulate("cc"), (None, false));
+        assert_eq!(dfa.simulate("ccc"), (None, false));
+        assert_eq!(dfa.simulate("ccccc"), (None, false));
+        assert_eq!(dfa.simulate("cccccab"), (None, true));
+        assert_eq!(dfa.simulate("cab"), (None, true));
+        assert_eq!(dfa.simulate("ab"), (None, false));
+        assert_eq!(dfa.simulate(""), (None, false));
     }
 
     #[test]
@@ -556,17 +576,17 @@ mod tests {
         // "c*"
         // "c+ab"
 
-        assert_eq!(dfa.simulate("a"), true);
-        assert_eq!(dfa.simulate("ab"), true);
-        assert_eq!(dfa.simulate("aa"), false);
-        assert_eq!(dfa.simulate("abb"), false);
-        assert_eq!(dfa.simulate("aba"), false);
-        assert_eq!(dfa.simulate("c"), true);
-        assert_eq!(dfa.simulate("cc"), true);
-        assert_eq!(dfa.simulate("ccc"), true);
-        assert_eq!(dfa.simulate("ccccc"), true);
-        assert_eq!(dfa.simulate("cccccab"), true);
-        assert_eq!(dfa.simulate("cab"), true);
-        assert_eq!(dfa.simulate(""), true);
+        assert_eq!(dfa.simulate("a"), (Some(HashSet::from([0])), true));
+        assert_eq!(dfa.simulate("ab"), (Some(HashSet::from([0])), true));
+        assert_eq!(dfa.simulate("aa"), (None, false));
+        assert_eq!(dfa.simulate("abb"), (None, false));
+        assert_eq!(dfa.simulate("aba"), (None, false));
+        assert_eq!(dfa.simulate("c"), (Some(HashSet::from([1])), true));
+        assert_eq!(dfa.simulate("cc"), (Some(HashSet::from([1])), true));
+        assert_eq!(dfa.simulate("ccc"), (Some(HashSet::from([1])), true));
+        assert_eq!(dfa.simulate("ccccc"), (Some(HashSet::from([1])), true));
+        assert_eq!(dfa.simulate("cccccab"), (Some(HashSet::from([2])), true));
+        assert_eq!(dfa.simulate("cab"), (Some(HashSet::from([2])), true));
+        assert_eq!(dfa.simulate(""), (Some(HashSet::from([1])), true));
     }
 }
