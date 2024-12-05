@@ -98,12 +98,17 @@ impl DFA {
 
 // Helper functions for converting multiple NFAs to a single DFA
 impl DFA {
-
-    fn epsilon_closure(nfas: &Vec<NFA>, states: &Vec<(usize, crate::nfa::nfa::State)>) -> Vec<(usize, crate::nfa::nfa::State)> {
+    fn epsilon_closure(
+        nfas: &Vec<NFA>,
+        states: &Vec<(usize, crate::nfa::nfa::State)>,
+    ) -> Vec<(usize, crate::nfa::nfa::State)> {
         let mut closure = Vec::new();
 
         for (idx, nfa_start) in states.iter() {
-            let single_nfa_start_epi_closure : Vec<crate::nfa::nfa::State> = nfas.get(*idx).unwrap().epsilon_closure(&vec![nfa_start.clone()]);
+            let single_nfa_start_epi_closure: Vec<crate::nfa::nfa::State> = nfas
+                .get(*idx)
+                .unwrap()
+                .epsilon_closure(&vec![nfa_start.clone()]);
             for state in single_nfa_start_epi_closure.iter() {
                 closure.push((*idx, state.clone()));
             }
@@ -115,7 +120,7 @@ impl DFA {
     fn combine_state_names(nfa_stats: &Vec<(usize, crate::nfa::nfa::State)>) -> String {
         let mut names = nfa_stats
             .iter()
-            .map(|state| state.0.to_string() + "_" + &state.1.0.to_string())
+            .map(|state| state.0.to_string() + "_" + &state.1 .0.to_string())
             .collect::<Vec<String>>();
         names.sort();
 
@@ -262,8 +267,10 @@ impl DFA {
             // The map stores all the transitions given a symbol for all the NFA states in the current dfa state
             let mut move_transitions_symbol_to_transitions_map = HashMap::new();
             for (idx, nfa_state) in nfa_states.iter() {
-                let transitions: Option<&Vec<crate::nfa::nfa::Transition>> =
-                    nfas.get(*idx).unwrap().get_transitions_from_state(nfa_state);
+                let transitions: Option<&Vec<crate::nfa::nfa::Transition>> = nfas
+                    .get(*idx)
+                    .unwrap()
+                    .get_transitions_from_state(nfa_state);
                 for transition in transitions.into_iter().flatten() {
                     let symbol = transition.get_symbol();
 
@@ -562,5 +569,4 @@ mod tests {
         assert_eq!(dfa.simulate("cab"), true);
         assert_eq!(dfa.simulate(""), true);
     }
-
 }
