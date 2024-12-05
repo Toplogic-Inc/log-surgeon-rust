@@ -1,5 +1,5 @@
-mod error_handling;
 mod dfa;
+mod error_handling;
 mod nfa;
 pub mod parser;
 

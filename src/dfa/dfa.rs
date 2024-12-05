@@ -90,8 +90,13 @@ impl DFA {
         // check if the current state is an accept state
         for accept_state in self.accept.iter() {
             if current_state == *accept_state {
-                if let Some(dfa_to_accepted_nfa_state_mapping) = &self.dfa_to_accepted_nfa_state_mapping {
-                    let nfa_states: &Vec<(usize, crate::nfa::nfa::State)> = dfa_to_accepted_nfa_state_mapping.get(&current_state).unwrap();
+                if let Some(dfa_to_accepted_nfa_state_mapping) =
+                    &self.dfa_to_accepted_nfa_state_mapping
+                {
+                    let nfa_states: &Vec<(usize, crate::nfa::nfa::State)> =
+                        dfa_to_accepted_nfa_state_mapping
+                            .get(&current_state)
+                            .unwrap();
 
                     let mut nfa_ids = HashSet::new();
                     for (nfa_id, state) in nfa_states.iter() {
@@ -100,7 +105,6 @@ impl DFA {
 
                     return (Some(nfa_ids), true);
                 }
-
 
                 return (None, true);
             }
@@ -243,8 +247,10 @@ impl DFA {
         let mut dfa_states: HashSet<State> = HashSet::new();
         let mut dfa_to_nfa_state_mapping: HashMap<State, Vec<(usize, crate::nfa::nfa::State)>> =
             HashMap::new();
-        let mut dfa_to_accepted_nfa_state_mapping: HashMap<State, Vec<(usize, crate::nfa::nfa::State)>> =
-            HashMap::new();
+        let mut dfa_to_accepted_nfa_state_mapping: HashMap<
+            State,
+            Vec<(usize, crate::nfa::nfa::State)>,
+        > = HashMap::new();
         let mut dfa_accept_states = HashSet::new();
         let mut dfa_transitions: HashMap<State, HashMap<char, Transition>> = HashMap::new();
         let mut worklist: Vec<State> = Vec::new();
@@ -276,7 +282,10 @@ impl DFA {
             // Note: tIf any of the NFA states in this dfa state is an accept state, then this dfa state is an accept state
             for (idx, nfa_state) in nfa_states.iter() {
                 if nfas.get(*idx).unwrap().get_accept() == *nfa_state {
-                    dfa_to_accepted_nfa_state_mapping.entry(dfa_state.clone()).or_insert_with(Vec::new).push((*idx, nfa_state.clone()));
+                    dfa_to_accepted_nfa_state_mapping
+                        .entry(dfa_state.clone())
+                        .or_insert_with(Vec::new)
+                        .push((*idx, nfa_state.clone()));
                     dfa_accept_states.insert(dfa_state.clone());
                 }
             }
@@ -349,11 +358,11 @@ impl DFA {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
     use crate::dfa::dfa::Tag::Start;
     use crate::dfa::dfa::{State, DFA};
     use crate::nfa::nfa::NFA;
     use crate::{dfa, nfa};
+    use std::collections::HashSet;
 
     #[test]
     fn test_dfa() {
