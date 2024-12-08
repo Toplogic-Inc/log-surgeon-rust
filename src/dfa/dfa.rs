@@ -23,23 +23,24 @@ pub(crate) struct DFA {
     start: State,
     accept: Vec<State>,
     states: Vec<State>,
-    transitions: HashMap<State, HashMap<u128, Transition>>, // from_state -> symbol -> to_state
+    transitions: Vec<HashMap<u128, Transition>>, // from_state -> symbol -> to_state
     dfa_to_accepted_nfa_state_mapping: Option<HashMap<State, Vec<(usize, crate::nfa::nfa::State)>>>, // to determine which NFA gets matched
 }
 
 impl DFA {
-    fn new(start_state: State, accept_states: Vec<State>) -> Self {
+    // Cretae a new DFA with only the start state: 0
+    fn new() -> Self {
         let mut _states = Vec::new();
-        _states.push(start_state.clone());
-        for state in accept_states.iter() {
-            _states.push(state.clone());
-        }
+        _states.push(State(0)); // start state is always 0
+
+        let mut _transitions = Vec::new();
+        _transitions.push(HashMap::new());
 
         DFA {
-            start: start_state,
-            accept: accept_states,
+            start: State(0),
+            accept: Vec::new(),
             states: _states,
-            transitions: HashMap::new(),
+            transitions: _transitions,
             dfa_to_accepted_nfa_state_mapping: None,
         }
     }
@@ -51,15 +52,13 @@ impl DFA {
         to_state: State,
         tag: Option<Tag>,
     ) {
-        // self.states.push(from_state.clone());
-        // self.states.push(to_state.clone());
-
         assert!(self.states.len() > from_state.0);
+        assert!(self.transitions.len() > from_state.0);
         assert!(self.states.len() > to_state.0);
 
         self.transitions
-            .entry(from_state.clone())
-            .or_insert_with(HashMap::new)
+            .get_mut(from_state.0)
+            .unwrap()
             .insert(
                 symbol_onehot_encoding,
                 Transition {
@@ -89,7 +88,7 @@ impl DFA {
 
         // simulate the dfa
         for symbol in input.chars() {
-            let transitions = self.transitions.get(&current_state);
+            let transitions = self.transitions.get(current_state.0);
             if transitions.is_none() {
                 return (None, false);
             }
@@ -179,7 +178,7 @@ impl DFA {
         let mut dfa_states: Vec<State> = Vec::new();
         let mut dfa_to_nfa_state_mapping: Vec<Rc<Vec<crate::nfa::nfa::State>>> = Vec::new();
         let mut dfa_accept_states = HashSet::new();
-        let mut dfa_transitions: HashMap<State, HashMap<u128, Transition>> = HashMap::new();
+        let mut dfa_transitions: Vec<HashMap<u128, Transition>> = Vec::new();
 
         // local variables to help create the DFA
         let mut l_worklist: Vec<State> = Vec::new();
@@ -194,6 +193,7 @@ impl DFA {
         dfa_to_nfa_state_mapping.push(start_epi_closure.clone());
         l_worklist.push(State(start_state.clone()));
         l_nfa_states_to_dfa_mapping.insert(start_epi_closure, State(start_state.clone()));
+        dfa_transitions.push(HashMap::new());
 
         // Process and add all dfa states
         while let Some(dfa_state) = l_worklist.pop() {
@@ -246,6 +246,7 @@ impl DFA {
                     println!("Inserting State {}", destination_dfa_state_idx);
 
                     dfa_states.push(State(destination_dfa_state_idx));
+                    dfa_transitions.push(HashMap::new());
                     dfa_to_nfa_state_mapping.push(destination_nfa_states.clone());
                     l_nfa_states_to_dfa_mapping.insert(
                         destination_nfa_states.clone(),
@@ -260,8 +261,8 @@ impl DFA {
 
                 // Add the transition to the dfa
                 dfa_transitions
-                    .entry(dfa_state.clone())
-                    .or_insert_with(HashMap::new)
+                    .get_mut(dfa_state.0)
+                    .unwrap()
                     .insert(
                         *symbol_onehot_encoding,
                         Transition {
@@ -297,7 +298,7 @@ impl DFA {
             Vec<(usize, crate::nfa::nfa::State)>,
         > = HashMap::new();
         let mut dfa_accept_states = HashSet::new();
-        let mut dfa_transitions: HashMap<State, HashMap<u128, Transition>> = HashMap::new();
+        let mut dfa_transitions: Vec<HashMap<u128, Transition>> = Vec::new();
 
         // local variables to help create the DFA
         let mut l_worklist: Vec<State> = Vec::new();
@@ -322,6 +323,7 @@ impl DFA {
 
         let start_state = 0usize;
         dfa_states.push(State(start_state));
+        dfa_transitions.push(HashMap::new());
         dfa_to_nfa_state_mapping.push(start_epi_closure.clone());
         l_nfa_states_to_dfa_mapping.insert(start_epi_closure, State(start_state));
         l_worklist.push(State(start_state));
@@ -384,6 +386,7 @@ impl DFA {
                     println!("Inserting State {}", destination_dfa_state_idx);
 
                     dfa_states.push(State(destination_dfa_state_idx));
+                    dfa_transitions.push(HashMap::new());
                     dfa_to_nfa_state_mapping.push(destination_nfa_states.clone());
                     l_nfa_states_to_dfa_mapping.insert(
                         destination_nfa_states.clone(),
@@ -397,8 +400,8 @@ impl DFA {
 
                 // Add the transition to the dfa
                 dfa_transitions
-                    .entry(dfa_state.clone())
-                    .or_insert_with(HashMap::new)
+                    .get_mut(dfa_state.0)
+                    .unwrap()
                     .insert(
                         *symbol_onehot_encoding,
                         Transition {
@@ -426,13 +429,18 @@ mod tests {
     use crate::dfa::dfa::{State, DFA};
     use crate::nfa::nfa::NFA;
     use crate::{dfa, nfa};
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
 
     #[test]
     fn test_dfa() {
-        let start = dfa::dfa::State("0".parse().unwrap());
-        let accept = dfa::dfa::State("1".parse().unwrap());
-        let mut dfa = DFA::new(start.clone(), vec![accept.clone()]);
+        let start = dfa::dfa::State(0);
+        let accept = dfa::dfa::State(1);
+        let mut dfa = DFA::new();
+
+        dfa.states.push(accept.clone());
+        dfa.transitions.push(HashMap::new());
+        dfa.accept.push(accept.clone());
+
         dfa.add_transition(
             start.clone(),
             nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('a'),
@@ -593,15 +601,15 @@ mod tests {
         assert_eq!(dfa.states.contains(&State(1)), true);
         assert_eq!(dfa.states.contains(&State(2)), true);
         //
-        assert_eq!(dfa.transitions.len(), 2);
-        let transitions_from_start = dfa.transitions.get(&State(0)).unwrap();
+        assert_eq!(dfa.transitions.len(), 3);
+        let transitions_from_start = dfa.transitions.get(0).unwrap();
         assert_eq!(transitions_from_start.len(), 1);
         let transitions_from_start_given_a = transitions_from_start
             .get(&nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('a'))
             .unwrap();
         assert_eq!(transitions_from_start_given_a.to_state, State(1));
 
-        let transitions_to_accept = dfa.transitions.get(&State(1)).unwrap();
+        let transitions_to_accept = dfa.transitions.get(1).unwrap();
         assert_eq!(transitions_to_accept.len(), 1);
         let transitions_to_accept_given_b = transitions_to_accept
             .get(&nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('b'))
