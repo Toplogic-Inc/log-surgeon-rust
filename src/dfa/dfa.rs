@@ -625,19 +625,40 @@ mod tests {
         // "c*"
         // "c+ab"
         let mut dfa_simulator = dfa::dfa::DfaSimulator::new(Rc::new(dfa));
-        assert_eq!(dfa_simulator.simulate_single_char('a'), (Some(0usize), true));
-        assert_eq!(dfa_simulator.simulate_single_char('b'), (Some(0usize), true));
+        assert_eq!(
+            dfa_simulator.simulate_single_char('a'),
+            (Some(0usize), true)
+        );
+        assert_eq!(
+            dfa_simulator.simulate_single_char('b'),
+            (Some(0usize), true)
+        );
         assert_eq!(dfa_simulator.simulate_single_char('b'), (None, false));
 
         dfa_simulator.reset_simulation();
-        assert_eq!(dfa_simulator.simulate_single_char('c'), (Some(1usize), true));
-        assert_eq!(dfa_simulator.simulate_single_char('c'), (Some(1usize), true));
-        assert_eq!(dfa_simulator.simulate_single_char('c'), (Some(1usize), true));
+        assert_eq!(
+            dfa_simulator.simulate_single_char('c'),
+            (Some(1usize), true)
+        );
+        assert_eq!(
+            dfa_simulator.simulate_single_char('c'),
+            (Some(1usize), true)
+        );
+        assert_eq!(
+            dfa_simulator.simulate_single_char('c'),
+            (Some(1usize), true)
+        );
         assert_eq!(dfa_simulator.simulate_single_char('a'), (None, true));
-        assert_eq!(dfa_simulator.simulate_single_char('b'), (Some(2usize), true));
+        assert_eq!(
+            dfa_simulator.simulate_single_char('b'),
+            (Some(2usize), true)
+        );
 
         dfa_simulator.reset_simulation();
-        assert_eq!(dfa_simulator.simulate_single_char('c'), (Some(1usize), true));
+        assert_eq!(
+            dfa_simulator.simulate_single_char('c'),
+            (Some(1usize), true)
+        );
         assert_eq!(dfa_simulator.simulate_single_char('b'), (None, false));
     }
 }
