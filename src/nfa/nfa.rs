@@ -16,7 +16,7 @@ pub(crate) struct State(pub usize);
 pub struct Transition {
     from: State,
     to: State,
-    symbol: Option<char>,
+    symbol_onehot_encoding: u128,
     tag: i16,
 }
 
@@ -25,23 +25,42 @@ impl Debug for Transition {
         write!(
             f,
             "{:?} -> {:?}, symbol: {:?}",
-            self.from, self.to, self.symbol
+            self.from, self.to, self.symbol_onehot_encoding
         )
     }
 }
 
 impl Transition {
-    pub fn new(from: State, to: State, symbol: Option<char>, tag: i16) -> Self {
+    pub fn convert_char_to_symbol_onehot_encoding(c: char) -> u128 {
+        let mut symbol_onehot_encoding = 0;
+        let c = c as u8;
+
+        symbol_onehot_encoding |= 1 << c;
+
+        symbol_onehot_encoding
+    }
+
+    pub fn new(from: State, to: State, symbol_onehot_encoding: u128, tag: i16) -> Self {
         Transition {
             from,
             to,
-            symbol,
+            symbol_onehot_encoding,
             tag,
         }
     }
 
-    pub fn get_symbol(&self) -> Option<char> {
-        self.symbol
+    pub fn get_symbol_onehot_encoding(&self) -> u128 {
+        self.symbol_onehot_encoding
+    }
+
+    pub fn get_symbol(&self) -> Vec<char> {
+        let mut symbol = vec![];
+        for i in 0..=127 {
+            if self.symbol_onehot_encoding & (1 << i) != 0 {
+                symbol.push(i as u8 as char);
+            }
+        }
+        symbol
     }
 
     pub fn get_to_state(&self) -> State {
@@ -69,7 +88,9 @@ impl NFA {
                 nfa.add_transition(Transition {
                     from: start.clone(),
                     to: accept.clone(),
-                    symbol: Some(ast_node.get_value()),
+                    symbol_onehot_encoding: Transition::convert_char_to_symbol_onehot_encoding(
+                        ast_node.get_value(),
+                    ),
                     tag: -1,
                 });
                 nfa
@@ -240,7 +261,7 @@ impl NFA {
         self.add_transition(Transition {
             from,
             to,
-            symbol: None,
+            symbol_onehot_encoding: 0,
             tag: -1,
         });
     }
@@ -271,7 +292,7 @@ impl NFA {
                 .map(|transition| Transition {
                     from: State(transition.from.0 + offset),
                     to: State(transition.to.0 + offset),
-                    symbol: transition.symbol,
+                    symbol_onehot_encoding: transition.symbol_onehot_encoding,
                     tag: transition.tag,
                 })
                 .collect();
@@ -312,7 +333,7 @@ impl NFA {
             }
 
             for transition in transitions.unwrap() {
-                if transition.symbol.is_none() {
+                if transition.symbol_onehot_encoding == 0 {
                     let to_state = transition.to.clone();
                     if !closure.contains(&to_state) {
                         closure.push(to_state.clone());
@@ -384,7 +405,7 @@ mod tests {
         nfa.add_transition(Transition {
             from: State(0),
             to: State(1),
-            symbol: Some('a'),
+            symbol_onehot_encoding: Transition::convert_char_to_symbol_onehot_encoding('a'),
             tag: -1,
         });
 
@@ -617,7 +638,7 @@ mod tests {
         nfa.add_transition(Transition {
             from: State(2),
             to: State(3),
-            symbol: Some('a'),
+            symbol_onehot_encoding: Transition::convert_char_to_symbol_onehot_encoding('a'),
             tag: -1,
         });
         nfa.add_epsilon_transition(State(3), State(5));

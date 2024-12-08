@@ -1,7 +1,6 @@
 use crate::nfa::nfa::NFA;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
-use std::process::id;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct State(String);
@@ -13,7 +12,7 @@ enum Tag {
 
 struct Transition {
     from_state: State,
-    symbol: char,
+    symbol_onehot_encoding: u128,
     to_state: State,
     tag: Option<Tag>,
 }
@@ -22,7 +21,7 @@ pub(crate) struct DFA {
     start: State,
     accept: Vec<State>,
     states: HashSet<State>,
-    transitions: HashMap<State, HashMap<char, Transition>>, // from_state -> symbol -> to_state
+    transitions: HashMap<State, HashMap<u128, Transition>>, // from_state -> symbol -> to_state
     dfa_to_accepted_nfa_state_mapping: Option<HashMap<State, Vec<(usize, crate::nfa::nfa::State)>>>, // to determine which NFA gets matched
 }
 
@@ -46,7 +45,7 @@ impl DFA {
     fn add_transition(
         &mut self,
         from_state: State,
-        symbol: char,
+        symbol_onehot_encoding: u128,
         to_state: State,
         tag: Option<Tag>,
     ) {
@@ -56,14 +55,27 @@ impl DFA {
             .entry(from_state.clone())
             .or_insert_with(HashMap::new)
             .insert(
-                symbol,
+                symbol_onehot_encoding,
                 Transition {
                     from_state,
-                    symbol,
+                    symbol_onehot_encoding,
                     to_state,
                     tag,
                 },
             );
+    }
+
+    fn get_transition(
+        transitions_map: &HashMap<u128, Transition>,
+        symbol: char,
+    ) -> Option<&Transition> {
+        for (transition_symbol, transition) in transitions_map.iter() {
+            if (*transition_symbol & (1 << (symbol as u8))) != 0 {
+                return Some(transition);
+            }
+        }
+
+        None
     }
 
     fn simulate(&self, input: &str) -> (Option<HashSet<usize>>, bool) {
@@ -76,7 +88,7 @@ impl DFA {
                 return (None, false);
             }
             let transitions = transitions.unwrap();
-            let transition = transitions.get(&symbol);
+            let transition = DFA::get_transition(transitions, symbol);
             if transition.is_none() {
                 return (None, false);
             }
@@ -99,7 +111,7 @@ impl DFA {
                             .unwrap();
 
                     let mut nfa_ids = HashSet::new();
-                    for (nfa_id, state) in nfa_states.iter() {
+                    for (nfa_id, _state) in nfa_states.iter() {
                         nfa_ids.insert(*nfa_id);
                     }
 
@@ -152,7 +164,7 @@ impl DFA {
         let mut dfa_to_nfa_state_mapping: HashMap<State, Vec<crate::nfa::nfa::State>> =
             HashMap::new();
         let mut dfa_accept_states = HashSet::new();
-        let mut dfa_transitions: HashMap<State, HashMap<char, Transition>> = HashMap::new();
+        let mut dfa_transitions: HashMap<State, HashMap<u128, Transition>> = HashMap::new();
         let mut worklist: Vec<State> = Vec::new();
 
         // Start with the epsilon closure of the start state
@@ -183,12 +195,12 @@ impl DFA {
                 let transitions: Option<&Vec<crate::nfa::nfa::Transition>> =
                     nfa.get_transitions_from_state(nfa_state);
                 for transition in transitions.into_iter().flatten() {
-                    let symbol = transition.get_symbol();
+                    let symbol_onehot_encoding = transition.get_symbol_onehot_encoding();
 
                     //We don't want to track epsilon transitions
-                    if let Some(s) = symbol {
+                    if symbol_onehot_encoding != 0 {
                         move_transitions_symbol_to_transitions_map
-                            .entry(s)
+                            .entry(symbol_onehot_encoding)
                             .or_insert_with(Vec::new)
                             .push(transition);
                     }
@@ -196,7 +208,9 @@ impl DFA {
             }
 
             // Process the Epsilon Closure of the Move operation
-            for (symbol, transitions) in move_transitions_symbol_to_transitions_map.iter() {
+            for (symbol_onehot_encoding, transitions) in
+                move_transitions_symbol_to_transitions_map.iter()
+            {
                 // Collect all the destination NFA states
                 let mut destination_nfa_states = Vec::new();
                 for transition in transitions.iter() {
@@ -219,10 +233,10 @@ impl DFA {
                     .entry(dfa_state.clone())
                     .or_insert_with(HashMap::new)
                     .insert(
-                        *symbol,
+                        *symbol_onehot_encoding,
                         Transition {
                             from_state: dfa_state.clone(),
-                            symbol: *symbol,
+                            symbol_onehot_encoding: *symbol_onehot_encoding,
                             to_state: State(destination_dfa_state.clone()),
                             tag: None,
                         },
@@ -252,7 +266,7 @@ impl DFA {
             Vec<(usize, crate::nfa::nfa::State)>,
         > = HashMap::new();
         let mut dfa_accept_states = HashSet::new();
-        let mut dfa_transitions: HashMap<State, HashMap<char, Transition>> = HashMap::new();
+        let mut dfa_transitions: HashMap<State, HashMap<u128, Transition>> = HashMap::new();
         let mut worklist: Vec<State> = Vec::new();
 
         // Start with the epsilon closure of the start state
@@ -299,12 +313,12 @@ impl DFA {
                     .unwrap()
                     .get_transitions_from_state(nfa_state);
                 for transition in transitions.into_iter().flatten() {
-                    let symbol = transition.get_symbol();
+                    let symbol_onehot_encoding = transition.get_symbol_onehot_encoding();
 
                     //We don't want to track epsilon transitions
-                    if let Some(s) = symbol {
+                    if symbol_onehot_encoding != 0 {
                         move_transitions_symbol_to_transitions_map
-                            .entry(s)
+                            .entry(symbol_onehot_encoding)
                             .or_insert_with(Vec::new)
                             .push((idx.clone(), transition));
                     }
@@ -312,7 +326,9 @@ impl DFA {
             }
 
             // Process the Epsilon Closure of the Move operation
-            for (symbol, transitions) in move_transitions_symbol_to_transitions_map.iter() {
+            for (symbol_onehot_encoding, transitions) in
+                move_transitions_symbol_to_transitions_map.iter()
+            {
                 // Collect all the destination NFA states
                 let mut destination_nfa_states: Vec<(usize, crate::nfa::nfa::State)> = Vec::new();
                 for (idx, transition) in transitions.iter() {
@@ -335,10 +351,10 @@ impl DFA {
                     .entry(dfa_state.clone())
                     .or_insert_with(HashMap::new)
                     .insert(
-                        *symbol,
+                        *symbol_onehot_encoding,
                         Transition {
                             from_state: dfa_state.clone(),
-                            symbol: *symbol,
+                            symbol_onehot_encoding: *symbol_onehot_encoding,
                             to_state: State(destination_dfa_state.clone()),
                             tag: None,
                         },
@@ -358,7 +374,6 @@ impl DFA {
 
 #[cfg(test)]
 mod tests {
-    use crate::dfa::dfa::Tag::Start;
     use crate::dfa::dfa::{State, DFA};
     use crate::nfa::nfa::NFA;
     use crate::{dfa, nfa};
@@ -369,8 +384,18 @@ mod tests {
         let start = dfa::dfa::State("0".parse().unwrap());
         let accept = dfa::dfa::State("1".parse().unwrap());
         let mut dfa = DFA::new(start.clone(), vec![accept.clone()]);
-        dfa.add_transition(start.clone(), 'a', accept.clone(), None);
-        dfa.add_transition(accept.clone(), 'b', start.clone(), None);
+        dfa.add_transition(
+            start.clone(),
+            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('a'),
+            accept.clone(),
+            None,
+        );
+        dfa.add_transition(
+            accept.clone(),
+            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('b'),
+            start.clone(),
+            None,
+        );
 
         assert_eq!(dfa.simulate("ab"), (None, false));
         assert_eq!(dfa.simulate("a"), (None, true));
@@ -404,21 +429,21 @@ mod tests {
         nfa.test_extern_add_transition(nfa::nfa::Transition::new(
             nfa::nfa::State(1),
             nfa::nfa::State(3),
-            Option::from('a'),
+            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('a'),
             -1,
         ));
 
         nfa.test_extern_add_transition(nfa::nfa::Transition::new(
             nfa::nfa::State(2),
             nfa::nfa::State(4),
-            Option::from('a'),
+            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('a'),
             -1,
         ));
 
         nfa.test_extern_add_transition(nfa::nfa::Transition::new(
             nfa::nfa::State(3),
             nfa::nfa::State(5),
-            Option::from('b'),
+            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('b'),
             -1,
         ));
 
@@ -446,7 +471,7 @@ mod tests {
         nfa.test_extern_add_transition(nfa::nfa::Transition::new(
             nfa::nfa::State(1),
             nfa::nfa::State(1),
-            Option::from('c'),
+            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('c'),
             -1,
         ));
 
@@ -475,25 +500,25 @@ mod tests {
         nfa.test_extern_add_transition(nfa::nfa::Transition::new(
             nfa::nfa::State(1),
             nfa::nfa::State(2),
-            Option::from('c'),
+            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('c'),
             -1,
         ));
         nfa.test_extern_add_transition(nfa::nfa::Transition::new(
             nfa::nfa::State(2),
             nfa::nfa::State(2),
-            Option::from('c'),
+            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('c'),
             -1,
         ));
         nfa.test_extern_add_transition(nfa::nfa::Transition::new(
             nfa::nfa::State(2),
             nfa::nfa::State(3),
-            Option::from('a'),
+            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('a'),
             -1,
         ));
         nfa.test_extern_add_transition(nfa::nfa::Transition::new(
             nfa::nfa::State(3),
             nfa::nfa::State(4),
-            Option::from('b'),
+            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('b'),
             -1,
         ));
 
@@ -502,7 +527,7 @@ mod tests {
 
     #[test]
     fn test_nfa1_from_nfa_to_dfa() {
-        let mut nfa = create_nfa1();
+        let nfa = create_nfa1();
         let dfa = DFA::from_nfa(nfa);
 
         assert_eq!(dfa.start, dfa::dfa::State("0,1,2".to_string()));
@@ -518,7 +543,9 @@ mod tests {
         assert_eq!(dfa.transitions.len(), 2);
         let transitions_from_start = dfa.transitions.get(&State("0,1,2".to_string())).unwrap();
         assert_eq!(transitions_from_start.len(), 1);
-        let transitions_from_start_given_a = transitions_from_start.get(&'a').unwrap();
+        let transitions_from_start_given_a = transitions_from_start
+            .get(&nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('a'))
+            .unwrap();
         assert_eq!(
             transitions_from_start_given_a.to_state,
             State("3,4,6".to_string())
@@ -526,7 +553,9 @@ mod tests {
 
         let transitions_to_accept = dfa.transitions.get(&State("3,4,6".to_string())).unwrap();
         assert_eq!(transitions_to_accept.len(), 1);
-        let transitions_to_accept_given_b = transitions_to_accept.get(&'b').unwrap();
+        let transitions_to_accept_given_b = transitions_to_accept
+            .get(&nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('b'))
+            .unwrap();
         assert_eq!(
             transitions_to_accept_given_b.to_state,
             State("5,6".to_string())
@@ -542,7 +571,7 @@ mod tests {
 
     #[test]
     fn test_nfa2_from_nfa_to_dfa() {
-        let mut nfa = create_nfa2();
+        let nfa = create_nfa2();
         let dfa = DFA::from_nfa(nfa);
 
         // Check correctness given some examples
@@ -557,7 +586,7 @@ mod tests {
 
     #[test]
     fn test_nfa3_from_nfa_to_dfa() {
-        let mut nfa = create_nfa3();
+        let nfa = create_nfa3();
         let dfa = DFA::from_nfa(nfa);
 
         // Check correctness given some examples
