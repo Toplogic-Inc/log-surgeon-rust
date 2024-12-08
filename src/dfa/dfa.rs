@@ -124,6 +124,15 @@ impl DFA {
 
         (None, false)
     }
+
+    fn reset_simulation(&self) {
+        // TODO: Implement this function
+    }
+
+    fn simulate_single_char(&self, input: char) -> (Option<usize>) {
+        // TODO: Implement this function
+        None
+    }
 }
 
 // Helper functions for converting multiple NFAs to a single DFA
