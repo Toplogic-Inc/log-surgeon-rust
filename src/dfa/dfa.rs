@@ -27,6 +27,11 @@ pub(crate) struct DFA {
     dfa_to_accepted_nfa_state_mapping: Vec<Option<(usize, crate::nfa::nfa::State)>>, // to determine which NFA gets matched
 }
 
+pub(crate) struct DfaSimulator {
+    dfa: Rc<DFA>,
+    current_state: State,
+}
+
 impl DFA {
     // Cretae a new DFA with only the start state: 0
     fn new() -> Self {
@@ -56,18 +61,15 @@ impl DFA {
         assert!(self.transitions.len() > from_state.0);
         assert!(self.states.len() > to_state.0);
 
-        self.transitions
-            .get_mut(from_state.0)
-            .unwrap()
-            .insert(
+        self.transitions.get_mut(from_state.0).unwrap().insert(
+            symbol_onehot_encoding,
+            Transition {
+                from_state,
                 symbol_onehot_encoding,
-                Transition {
-                    from_state,
-                    symbol_onehot_encoding,
-                    to_state,
-                    tag,
-                },
-            );
+                to_state,
+                tag,
+            },
+        );
     }
 
     fn get_transition(
@@ -81,6 +83,21 @@ impl DFA {
         }
 
         None
+    }
+
+    fn get_accept_nfa_state(&self, s: usize) -> Option<usize> {
+        let nfa_state = self.dfa_to_accepted_nfa_state_mapping.get(s);
+
+        if nfa_state.is_none() {
+            return None;
+        }
+
+        let nfa_state = nfa_state.unwrap();
+        if nfa_state.is_none() {
+            return None;
+        }
+
+        Some(nfa_state.clone().unwrap().0)
     }
 
     fn simulate(&self, input: &str) -> (Option<usize>, bool) {
@@ -107,34 +124,24 @@ impl DFA {
         // check if the current state is an accept state
         for accept_state in self.accept.iter() {
             if current_state == *accept_state {
-                let nfa_state =
-                    self.dfa_to_accepted_nfa_state_mapping
-                        .get(current_state.0);
+                let nfa_state = self.dfa_to_accepted_nfa_state_mapping.get(current_state.0);
 
                 if nfa_state.is_none() {
                     println!("[WARN] This should only happen when the DFA is created from scratch, not created from NFA(s)");
-                    return (None, true)
+                    return (None, true);
                 }
 
-                let nfa_state =
-                    self.dfa_to_accepted_nfa_state_mapping
-                        .get(current_state.0).unwrap();
+                let nfa_state = self
+                    .dfa_to_accepted_nfa_state_mapping
+                    .get(current_state.0)
+                    .unwrap();
 
                 assert_eq!(nfa_state.is_some(), true);
-                return (Some(nfa_state.clone().unwrap().0), true)
+                return (Some(nfa_state.clone().unwrap().0), true);
             }
         }
 
         (None, false)
-    }
-
-    fn reset_simulation(&self) {
-        // TODO: Implement this function
-    }
-
-    fn simulate_single_char(&self, input: char) -> Option<usize> {
-        // TODO: Implement this function
-        None
     }
 }
 
@@ -170,7 +177,8 @@ impl DFA {
         let mut dfa_states: Vec<State> = Vec::new();
         let mut dfa_to_nfa_state_mapping: Vec<Rc<Vec<(usize, crate::nfa::nfa::State)>>> =
             Vec::new();
-        let mut dfa_to_accepted_nfa_state_mapping: Vec<Option<(usize, crate::nfa::nfa::State)>> = Vec::new();
+        let mut dfa_to_accepted_nfa_state_mapping: Vec<Option<(usize, crate::nfa::nfa::State)>> =
+            Vec::new();
         let mut dfa_accept_states = HashSet::new();
         let mut dfa_transitions: Vec<HashMap<u128, Transition>> = Vec::new();
 
@@ -212,7 +220,11 @@ impl DFA {
             // Note: If any of the NFA states in this dfa state is an accept state, then this dfa state is an accept state
             for (idx, nfa_state) in nfa_states.iter() {
                 if nfas.get(*idx).unwrap().get_accept() == *nfa_state {
-                    dfa_to_accepted_nfa_state_mapping.get_mut(dfa_state.0).as_mut().unwrap().replace((*idx, nfa_state.clone()));
+                    dfa_to_accepted_nfa_state_mapping
+                        .get_mut(dfa_state.0)
+                        .as_mut()
+                        .unwrap()
+                        .replace((*idx, nfa_state.clone()));
                     dfa_accept_states.insert(dfa_state.clone());
                 }
             }
@@ -272,18 +284,15 @@ impl DFA {
                     .unwrap();
 
                 // Add the transition to the dfa
-                dfa_transitions
-                    .get_mut(dfa_state.0)
-                    .unwrap()
-                    .insert(
-                        *symbol_onehot_encoding,
-                        Transition {
-                            from_state: dfa_state.clone(),
-                            symbol_onehot_encoding: *symbol_onehot_encoding,
-                            to_state: destination_dfa_state.clone(),
-                            tag: None,
-                        },
-                    );
+                dfa_transitions.get_mut(dfa_state.0).unwrap().insert(
+                    *symbol_onehot_encoding,
+                    Transition {
+                        from_state: dfa_state.clone(),
+                        symbol_onehot_encoding: *symbol_onehot_encoding,
+                        to_state: destination_dfa_state.clone(),
+                        tag: None,
+                    },
+                );
             }
         }
 
@@ -297,12 +306,58 @@ impl DFA {
     }
 }
 
+impl DfaSimulator {
+    fn new(dfa: Rc<DFA>) -> Self {
+        DfaSimulator {
+            dfa: dfa.clone(),
+            current_state: dfa.start.clone(),
+        }
+    }
+
+    fn reset_simulation(&mut self) {
+        self.current_state = self.dfa.start.clone();
+    }
+
+    // Simulate the DFA with a single character
+    // Returns the next state and whether the current state is a valid state
+    // invalid state means that the DFA has reached a dead end
+    fn simulate_single_char(&mut self, input: char) -> (Option<usize>, bool) {
+        let transitions = self.dfa.transitions.get(self.current_state.0);
+
+        if transitions.is_none() {
+            // not matched, nor is tracked by DFA, so invalid state
+            return (None, false);
+        }
+
+        let transitions = transitions.unwrap();
+        let transition = DFA::get_transition(transitions, input);
+
+        if transition.is_none() {
+            // not matched, nor is tracked by DFA, so invalid state
+            return (None, false);
+        }
+
+        let next_state = transition.unwrap().to_state.clone();
+
+        let potential_accept_state = self.dfa.get_accept_nfa_state(next_state.0);
+        self.current_state = next_state;
+
+        if potential_accept_state.is_some() {
+            // we have a match
+            return (potential_accept_state, true);
+        }
+
+        // not matched, but still valid
+        (None, true)
+    }
+}
 #[cfg(test)]
 mod tests {
     use crate::dfa::dfa::{State, DFA};
     use crate::nfa::nfa::NFA;
     use crate::{dfa, nfa};
     use std::collections::{HashMap, HashSet};
+    use std::rc::Rc;
 
     #[test]
     fn test_dfa() {
@@ -554,5 +609,35 @@ mod tests {
         assert_eq!(dfa.simulate("cccccab"), (Some(2usize), true));
         assert_eq!(dfa.simulate("cab"), (Some(2usize), true));
         assert_eq!(dfa.simulate(""), (Some(1usize), true));
+    }
+
+    #[test]
+    fn test_esay_from_multi_nfas_to_dfa_single_char_simulation() {
+        let nfa1 = create_nfa1();
+        let nfa2 = create_nfa2();
+        let nfa3 = create_nfa3();
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa1, nfa2, nfa3]);
+
+        // Check correctness given some examples
+        // Should match:
+        // "a" or "ab"
+        // "c*"
+        // "c+ab"
+        let mut dfa_simulator = dfa::dfa::DfaSimulator::new(Rc::new(dfa));
+        assert_eq!(dfa_simulator.simulate_single_char('a'), (Some(0usize), true));
+        assert_eq!(dfa_simulator.simulate_single_char('b'), (Some(0usize), true));
+        assert_eq!(dfa_simulator.simulate_single_char('b'), (None, false));
+
+        dfa_simulator.reset_simulation();
+        assert_eq!(dfa_simulator.simulate_single_char('c'), (Some(1usize), true));
+        assert_eq!(dfa_simulator.simulate_single_char('c'), (Some(1usize), true));
+        assert_eq!(dfa_simulator.simulate_single_char('c'), (Some(1usize), true));
+        assert_eq!(dfa_simulator.simulate_single_char('a'), (None, true));
+        assert_eq!(dfa_simulator.simulate_single_char('b'), (Some(2usize), true));
+
+        dfa_simulator.reset_simulation();
+        assert_eq!(dfa_simulator.simulate_single_char('c'), (Some(1usize), true));
+        assert_eq!(dfa_simulator.simulate_single_char('b'), (None, false));
     }
 }
