@@ -3,10 +3,13 @@ use regex_syntax::ast;
 #[derive(Debug)]
 pub enum Error {
     RegexParsingError(ast::Error),
-    AstToNfaNotSupported(&'static str),
+    UnsupportedAstNodeType(&'static str),
     NoneASCIICharacters,
-    NegatedPerl,
+    NegationNotSupported(&'static str),
     NonGreedyRepetitionNotSupported,
+    UnsupportedAstBracketedKind,
+    UnsupportedClassSetType,
+    UnsupportedGroupKindType,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

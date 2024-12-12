@@ -6,17 +6,13 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 use crate::error_handling::Error::{
-    AstToNfaNotSupported, NegatedPerl, NonGreedyRepetitionNotSupported, NoneASCIICharacters,
+    NegationNotSupported, NonGreedyRepetitionNotSupported, NoneASCIICharacters,
+    UnsupportedAstBracketedKind, UnsupportedAstNodeType, UnsupportedClassSetType,
+    UnsupportedGroupKindType,
 };
-use crate::parser::ast_node::ast_node::AstNode;
-use crate::parser::ast_node::ast_node_concat::AstNodeConcat;
-use crate::parser::ast_node::ast_node_literal::AstNodeLiteral;
-use crate::parser::ast_node::ast_node_optional::AstNodeOptional;
-use crate::parser::ast_node::ast_node_plus::AstNodePlus;
-use crate::parser::ast_node::ast_node_star::AstNodeStar;
-use crate::parser::ast_node::ast_node_union::AstNodeUnion;
 use regex_syntax::ast::{
-    Alternation, Ast, ClassPerl, ClassPerlKind, Literal, Repetition, RepetitionKind,
+    Alternation, Ast, ClassBracketed, ClassPerl, ClassPerlKind, ClassSet, ClassSetItem,
+    ClassSetRange, ClassSetUnion, Concat, Group, GroupKind, Literal, Repetition, RepetitionKind,
     RepetitionRange,
 };
 
@@ -136,21 +132,12 @@ impl NFA {
             Ast::Dot(dot) => self.add_dot(start, end)?,
             Ast::ClassPerl(perl) => self.add_perl(&**perl, start, end)?,
             Ast::Repetition(repetition) => self.add_repetition(&**repetition, start, end)?,
-            Ast::Concat(concat) => {
-                let mut curr_start = start.clone();
-                for (idx, sub_ast) in concat.asts.iter().enumerate() {
-                    let curr_end = if concat.asts.len() - 1 == idx {
-                        end.clone()
-                    } else {
-                        self.new_state()
-                    };
-                    self.add_ast_to_nfa(sub_ast, curr_start.clone(), curr_end.clone())?;
-                    curr_start = curr_end.clone();
-                }
-            }
+            Ast::Concat(concat) => self.add_concat(&**concat, start, end)?,
+            Ast::ClassBracketed(bracketed) => self.add_bracketed(&**bracketed, start, end)?,
             Ast::Alternation(alternation) => self.add_alternation(&**alternation, start, end)?,
+            Ast::Group(group) => self.add_group(&**group, start, end)?,
             _ => {
-                return Err(AstToNfaNotSupported("Ast Type not supported"));
+                return Err(UnsupportedAstNodeType("Ast Type not supported"));
             }
         }
         Ok(())
@@ -169,12 +156,34 @@ impl NFA {
 
     fn add_perl(&mut self, perl: &ClassPerl, start: State, end: State) -> Result<()> {
         if perl.negated {
-            return Err(NegatedPerl);
+            return Err(NegationNotSupported("Negation in perl not yet supported."));
         }
         match perl.kind {
             ClassPerlKind::Digit => self.add_transition(start, end, DIGIT_TRANSITION),
             ClassPerlKind::Space => self.add_transition(start, end, SPACE_TRANSITION),
             ClassPerlKind::Word => self.add_transition(start, end, WORD_TRANSITION),
+        }
+        Ok(())
+    }
+
+    fn add_concat(&mut self, concat: &Concat, start: State, end: State) -> Result<()> {
+        let mut curr_start = start.clone();
+        for (idx, sub_ast) in concat.asts.iter().enumerate() {
+            let curr_end = if concat.asts.len() - 1 == idx {
+                end.clone()
+            } else {
+                self.new_state()
+            };
+            self.add_ast_to_nfa(sub_ast, curr_start.clone(), curr_end.clone())?;
+            curr_start = curr_end.clone();
+        }
+        Ok(())
+    }
+
+    fn add_group(&mut self, group: &Group, start: State, end: State) -> Result<()> {
+        match &group.kind {
+            GroupKind::CaptureIndex(_) => self.add_ast_to_nfa(&group.ast, start, end)?,
+            _ => return Err(UnsupportedGroupKindType),
         }
         Ok(())
     }
@@ -238,6 +247,60 @@ impl NFA {
                     start_state = intermediate_state;
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    fn add_bracketed(
+        &mut self,
+        bracketed: &ClassBracketed,
+        start: State,
+        end: State,
+    ) -> Result<()> {
+        if bracketed.negated {
+            return Err(NegationNotSupported(
+                "Negation in bracket not yet supported",
+            ));
+        }
+        match &bracketed.kind {
+            ClassSet::Item(item) => self.add_class_set_item(item, start, end)?,
+            _ => return Err(UnsupportedAstBracketedKind),
+        }
+        Ok(())
+    }
+
+    fn add_class_set_item(&mut self, item: &ClassSetItem, start: State, end: State) -> Result<()> {
+        match item {
+            ClassSetItem::Literal(literal) => self.add_literal(literal, start, end)?,
+            ClassSetItem::Bracketed(bracketed) => self.add_bracketed(bracketed, start, end)?,
+            ClassSetItem::Range(range) => self.add_range(range, start, end)?,
+            ClassSetItem::Perl(perl) => self.add_perl(perl, start, end)?,
+            ClassSetItem::Union(union) => self.add_union(union, start, end)?,
+            _ => return Err(UnsupportedClassSetType),
+        }
+        Ok(())
+    }
+
+    fn add_range(&mut self, range: &ClassSetRange, start: State, end: State) -> Result<()> {
+        self.add_transition_from_range(
+            start,
+            end,
+            Some((get_ascii_char(range.start.c)?, get_ascii_char(range.end.c)?)),
+        );
+        Ok(())
+    }
+
+    fn add_union(&mut self, union: &ClassSetUnion, start: State, end: State) -> Result<()> {
+        let mut curr_start = start.clone();
+        for (idx, item) in union.items.iter().enumerate() {
+            let curr_end = if union.items.len() - 1 == idx {
+                end.clone()
+            } else {
+                self.new_state()
+            };
+            self.add_class_set_item(item, curr_start.clone(), curr_end.clone())?;
+            curr_start = curr_end.clone();
         }
 
         Ok(())
@@ -511,8 +574,6 @@ mod tests {
             let mut nfa = NFA::new();
             let nfa_result = nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1));
             assert!(nfa_result.is_err());
-            let nfa_error = nfa_result.err().unwrap();
-            assert!(matches!(nfa_error, NegatedPerl));
         }
 
         Ok(())
@@ -704,6 +765,33 @@ mod tests {
 
         {
             let mut parser = RegexParser::new();
+            let parsed_ast = parser.parse_into_ast(r"a{3}")?;
+
+            let mut nfa = NFA::new();
+            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+
+            assert!(has_transition(&nfa, State(0), State(2), a_transition));
+            assert!(has_no_transition(
+                &nfa,
+                State(2),
+                State(1),
+                EPSILON_TRANSITION
+            ));
+            assert!(has_transition(&nfa, State(2), State(3), a_transition));
+            assert!(has_no_transition(
+                &nfa,
+                State(3),
+                State(1),
+                EPSILON_TRANSITION
+            ));
+            assert!(has_transition(&nfa, State(3), State(1), a_transition));
+            assert!(has_no_transition(&nfa, State(1), State(1), a_transition));
+
+            assert_eq!(nfa.states.len(), 4);
+        }
+
+        {
+            let mut parser = RegexParser::new();
             let parsed_ast = parser.parse_into_ast(r"a{3,6}")?;
 
             let mut nfa = NFA::new();
@@ -734,6 +822,100 @@ mod tests {
 
             assert_eq!(nfa.states.len(), 7);
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_group() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"(\s|\d)+")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+
+        assert!(has_transition(&nfa, State(0), State(2), EPSILON_TRANSITION));
+        assert!(has_transition(&nfa, State(2), State(3), SPACE_TRANSITION));
+        assert!(has_transition(&nfa, State(3), State(1), EPSILON_TRANSITION));
+        assert!(has_transition(&nfa, State(0), State(4), EPSILON_TRANSITION));
+        assert!(has_transition(&nfa, State(4), State(5), DIGIT_TRANSITION));
+        assert!(has_transition(&nfa, State(5), State(1), EPSILON_TRANSITION));
+
+        assert!(has_transition(&nfa, State(1), State(6), EPSILON_TRANSITION));
+        assert!(has_transition(&nfa, State(6), State(7), SPACE_TRANSITION));
+        assert!(has_transition(&nfa, State(7), State(1), EPSILON_TRANSITION));
+        assert!(has_transition(&nfa, State(1), State(8), EPSILON_TRANSITION));
+        assert!(has_transition(&nfa, State(8), State(9), DIGIT_TRANSITION));
+        assert!(has_transition(&nfa, State(9), State(1), EPSILON_TRANSITION));
+
+        assert_eq!(nfa.states.len(), 10);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_bracketed() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"[a-c3-9[A-X]]")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+
+        assert!(has_transition(
+            &nfa,
+            State(0),
+            State(2),
+            Transition::convert_char_range_to_symbol_onehot_encoding(Some((b'a', b'c')))
+        ));
+        assert!(has_transition(
+            &nfa,
+            State(2),
+            State(3),
+            Transition::convert_char_range_to_symbol_onehot_encoding(Some((b'3', b'9')))
+        ));
+        assert!(has_transition(
+            &nfa,
+            State(3),
+            State(1),
+            Transition::convert_char_range_to_symbol_onehot_encoding(Some((b'A', b'X')))
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_floating_point_regex() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"\-{0,1}[0-9]+\.[0-9]+")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+
+        println!("{:?}", nfa);
+
+        assert!(has_transition(&nfa, State(0), State(2), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            State(2),
+            State(3),
+            Transition::convert_char_to_symbol_onehot_encoding('-')
+        ));
+        assert!(has_transition(&nfa, State(3), State(2), EPSILON_TRANSITION));
+
+        assert!(has_transition(&nfa, State(2), State(4), DIGIT_TRANSITION));
+        assert!(has_transition(&nfa, State(4), State(4), DIGIT_TRANSITION));
+
+        assert!(has_transition(
+            &nfa,
+            State(4),
+            State(5),
+            Transition::convert_char_to_symbol_onehot_encoding('.')
+        ));
+
+        assert!(has_transition(&nfa, State(5), State(1), DIGIT_TRANSITION));
+        assert!(has_transition(&nfa, State(1), State(1), DIGIT_TRANSITION));
+
+        assert_eq!(nfa.states.len(), 6);
 
         Ok(())
     }
