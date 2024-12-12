@@ -6,6 +6,7 @@ pub enum Error {
     AstToNfaNotSupported(&'static str),
     NoneASCIICharacters,
     NegatedPerl,
+    NonGreedyRepetitionNotSupported,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
