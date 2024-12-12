@@ -112,15 +112,18 @@ pub(crate) struct NFA {
     transitions: HashMap<State, Vec<Transition>>,
 }
 
+impl NFA {
+    pub const START_STATE: State = State(0);
+    pub const ACCEPT_STATE: State = State(1);
+}
+
 // NFA implementation for NFA construction from AST
 impl NFA {
     pub fn new() -> Self {
-        let start = State(0);
-        let accept = State(1);
-        let states_vec = vec![start.clone(), accept.clone()];
+        let states_vec = vec![NFA::START_STATE.clone(), NFA::ACCEPT_STATE.clone()];
         NFA {
-            start,
-            accept,
+            start: NFA::START_STATE,
+            accept: NFA::ACCEPT_STATE,
             states: states_vec,
             transitions: HashMap::new(),
         }
@@ -462,12 +465,12 @@ mod tests {
         let mut parser = RegexParser::new();
         let parsed_ast = parser.parse_into_ast(r"&")?;
         let mut nfa = NFA::new();
-        nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
         assert!(has_transition(
             &nfa,
-            State(0),
-            State(1),
+            NFA::START_STATE,
+            NFA::ACCEPT_STATE,
             Transition::convert_char_to_symbol_onehot_encoding('&')
         ));
         Ok(())
@@ -479,12 +482,12 @@ mod tests {
             let mut parser = RegexParser::new();
             let parsed_ast = parser.parse_into_ast(r".")?;
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
             assert!(has_transition(
                 &nfa,
-                State(0),
-                State(1),
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
                 Transition::convert_char_range_to_symbol_onehot_encoding(Some((0, 127)))
             ));
         }
@@ -494,12 +497,12 @@ mod tests {
             let mut parser = RegexParser::new();
             let parsed_ast = parser.parse_into_ast(r"\.")?;
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
             assert!(has_transition(
                 &nfa,
-                State(0),
-                State(1),
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
                 Transition::convert_char_to_symbol_onehot_encoding('.')
             ));
         }
@@ -513,13 +516,13 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"\d")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
             let char_vec: Vec<u8> = (b'0'..=b'9').collect();
             assert!(has_transition(
                 &nfa,
-                State(0),
-                State(1),
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
                 Transition::convert_char_vec_to_symbol_onehot_encoding(char_vec)
             ));
         }
@@ -529,7 +532,7 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"\s")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
             let char_vec = vec![
                 b' ',    // Space
@@ -541,8 +544,8 @@ mod tests {
             ];
             assert!(has_transition(
                 &nfa,
-                State(0),
-                State(1),
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
                 Transition::convert_char_vec_to_symbol_onehot_encoding(char_vec)
             ));
         }
@@ -552,7 +555,7 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"\w")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
             let char_vec: Vec<u8> = (b'0'..=b'9')
                 .chain(b'A'..=b'Z')
@@ -561,8 +564,8 @@ mod tests {
                 .collect();
             assert!(has_transition(
                 &nfa,
-                State(0),
-                State(1),
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
                 Transition::convert_char_vec_to_symbol_onehot_encoding(char_vec)
             ));
         }
@@ -572,7 +575,7 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"\D")?;
 
             let mut nfa = NFA::new();
-            let nfa_result = nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1));
+            let nfa_result = nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE);
             assert!(nfa_result.is_err());
         }
 
@@ -585,11 +588,11 @@ mod tests {
         let parsed_ast = parser.parse_into_ast(r"<\d>")?;
 
         let mut nfa = NFA::new();
-        nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
         assert!(has_transition(
             &nfa,
-            State(0),
+            NFA::START_STATE,
             State(2),
             Transition::convert_char_to_symbol_onehot_encoding('<')
         ));
@@ -597,7 +600,7 @@ mod tests {
         assert!(has_transition(
             &nfa,
             State(3),
-            State(1),
+            NFA::ACCEPT_STATE,
             Transition::convert_char_to_symbol_onehot_encoding('>')
         ));
 
@@ -610,22 +613,47 @@ mod tests {
         let parsed_ast = parser.parse_into_ast(r"\d|a|bcd")?;
 
         let mut nfa = NFA::new();
-        nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-        assert!(has_transition(&nfa, State(0), State(2), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            NFA::START_STATE,
+            State(2),
+            EPSILON_TRANSITION
+        ));
         assert!(has_transition(&nfa, State(2), State(3), DIGIT_TRANSITION));
-        assert!(has_transition(&nfa, State(3), State(1), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            State(3),
+            NFA::ACCEPT_STATE,
+            EPSILON_TRANSITION
+        ));
 
-        assert!(has_transition(&nfa, State(0), State(4), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            NFA::START_STATE,
+            State(4),
+            EPSILON_TRANSITION
+        ));
         assert!(has_transition(
             &nfa,
             State(4),
             State(5),
             Transition::convert_char_to_symbol_onehot_encoding('a')
         ));
-        assert!(has_transition(&nfa, State(5), State(1), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            State(5),
+            NFA::ACCEPT_STATE,
+            EPSILON_TRANSITION
+        ));
 
-        assert!(has_transition(&nfa, State(0), State(6), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            NFA::START_STATE,
+            State(6),
+            EPSILON_TRANSITION
+        ));
         assert!(has_transition(
             &nfa,
             State(6),
@@ -644,7 +672,12 @@ mod tests {
             State(7),
             Transition::convert_char_to_symbol_onehot_encoding('d')
         ));
-        assert!(has_transition(&nfa, State(7), State(1), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            State(7),
+            NFA::ACCEPT_STATE,
+            EPSILON_TRANSITION
+        ));
 
         Ok(())
     }
@@ -658,15 +691,40 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"a{0,3}")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-            assert!(has_transition(&nfa, State(0), State(1), EPSILON_TRANSITION));
-            assert!(has_transition(&nfa, State(1), State(2), a_transition));
-            assert!(has_transition(&nfa, State(2), State(1), EPSILON_TRANSITION));
+            assert!(has_transition(
+                &nfa,
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
+            assert!(has_transition(
+                &nfa,
+                NFA::ACCEPT_STATE,
+                State(2),
+                a_transition
+            ));
+            assert!(has_transition(
+                &nfa,
+                State(2),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
             assert!(has_transition(&nfa, State(2), State(3), a_transition));
-            assert!(has_transition(&nfa, State(3), State(1), EPSILON_TRANSITION));
+            assert!(has_transition(
+                &nfa,
+                State(3),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
             assert!(has_transition(&nfa, State(3), State(4), a_transition));
-            assert!(has_transition(&nfa, State(4), State(1), EPSILON_TRANSITION));
+            assert!(has_transition(
+                &nfa,
+                State(4),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
 
             assert_eq!(nfa.states.len(), 5);
         }
@@ -676,11 +734,26 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"a{0,1}")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-            assert!(has_transition(&nfa, State(0), State(1), EPSILON_TRANSITION));
-            assert!(has_transition(&nfa, State(1), State(2), a_transition));
-            assert!(has_transition(&nfa, State(2), State(1), EPSILON_TRANSITION));
+            assert!(has_transition(
+                &nfa,
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
+            assert!(has_transition(
+                &nfa,
+                NFA::ACCEPT_STATE,
+                State(2),
+                a_transition
+            ));
+            assert!(has_transition(
+                &nfa,
+                State(2),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
 
             assert_eq!(nfa.states.len(), 3);
         }
@@ -690,10 +763,20 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"a*")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-            assert!(has_transition(&nfa, State(0), State(1), EPSILON_TRANSITION));
-            assert!(has_transition(&nfa, State(1), State(1), a_transition));
+            assert!(has_transition(
+                &nfa,
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
+            assert!(has_transition(
+                &nfa,
+                NFA::ACCEPT_STATE,
+                State(1),
+                a_transition
+            ));
 
             assert_eq!(nfa.states.len(), 2);
         }
@@ -703,16 +786,26 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"a+")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
             assert!(has_no_transition(
                 &nfa,
-                State(0),
-                State(1),
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
-            assert!(has_transition(&nfa, State(0), State(1), a_transition));
-            assert!(has_transition(&nfa, State(1), State(1), a_transition));
+            assert!(has_transition(
+                &nfa,
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
+                a_transition
+            ));
+            assert!(has_transition(
+                &nfa,
+                NFA::ACCEPT_STATE,
+                State(1),
+                a_transition
+            ));
 
             assert_eq!(nfa.states.len(), 2);
         }
@@ -722,16 +815,26 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"a{1,}")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
             assert!(has_no_transition(
                 &nfa,
-                State(0),
-                State(1),
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
-            assert!(has_transition(&nfa, State(0), State(1), a_transition));
-            assert!(has_transition(&nfa, State(1), State(1), a_transition));
+            assert!(has_transition(
+                &nfa,
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
+                a_transition
+            ));
+            assert!(has_transition(
+                &nfa,
+                NFA::ACCEPT_STATE,
+                State(1),
+                a_transition
+            ));
 
             assert_eq!(nfa.states.len(), 2);
         }
@@ -741,24 +844,39 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"a{3,}")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-            assert!(has_transition(&nfa, State(0), State(2), a_transition));
+            assert!(has_transition(
+                &nfa,
+                NFA::START_STATE,
+                State(2),
+                a_transition
+            ));
             assert!(has_no_transition(
                 &nfa,
                 State(2),
-                State(1),
+                NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
             assert!(has_transition(&nfa, State(2), State(3), a_transition));
             assert!(has_no_transition(
                 &nfa,
                 State(3),
-                State(1),
+                NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
-            assert!(has_transition(&nfa, State(3), State(1), a_transition));
-            assert!(has_transition(&nfa, State(1), State(1), a_transition));
+            assert!(has_transition(
+                &nfa,
+                State(3),
+                NFA::ACCEPT_STATE,
+                a_transition
+            ));
+            assert!(has_transition(
+                &nfa,
+                NFA::ACCEPT_STATE,
+                State(1),
+                a_transition
+            ));
 
             assert_eq!(nfa.states.len(), 4);
         }
@@ -768,24 +886,39 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"a{3}")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-            assert!(has_transition(&nfa, State(0), State(2), a_transition));
+            assert!(has_transition(
+                &nfa,
+                NFA::START_STATE,
+                State(2),
+                a_transition
+            ));
             assert!(has_no_transition(
                 &nfa,
                 State(2),
-                State(1),
+                NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
             assert!(has_transition(&nfa, State(2), State(3), a_transition));
             assert!(has_no_transition(
                 &nfa,
                 State(3),
-                State(1),
+                NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
-            assert!(has_transition(&nfa, State(3), State(1), a_transition));
-            assert!(has_no_transition(&nfa, State(1), State(1), a_transition));
+            assert!(has_transition(
+                &nfa,
+                State(3),
+                NFA::ACCEPT_STATE,
+                a_transition
+            ));
+            assert!(has_no_transition(
+                &nfa,
+                NFA::ACCEPT_STATE,
+                State(1),
+                a_transition
+            ));
 
             assert_eq!(nfa.states.len(), 4);
         }
@@ -795,30 +928,60 @@ mod tests {
             let parsed_ast = parser.parse_into_ast(r"a{3,6}")?;
 
             let mut nfa = NFA::new();
-            nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-            assert!(has_transition(&nfa, State(0), State(2), a_transition));
+            assert!(has_transition(
+                &nfa,
+                NFA::START_STATE,
+                State(2),
+                a_transition
+            ));
             assert!(has_no_transition(
                 &nfa,
                 State(2),
-                State(1),
+                NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
             assert!(has_transition(&nfa, State(2), State(3), a_transition));
             assert!(has_no_transition(
                 &nfa,
                 State(3),
-                State(1),
+                NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
-            assert!(has_transition(&nfa, State(3), State(1), a_transition));
+            assert!(has_transition(
+                &nfa,
+                State(3),
+                NFA::ACCEPT_STATE,
+                a_transition
+            ));
 
-            assert!(has_transition(&nfa, State(1), State(4), a_transition));
-            assert!(has_transition(&nfa, State(4), State(1), EPSILON_TRANSITION));
+            assert!(has_transition(
+                &nfa,
+                NFA::ACCEPT_STATE,
+                State(4),
+                a_transition
+            ));
+            assert!(has_transition(
+                &nfa,
+                State(4),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
             assert!(has_transition(&nfa, State(4), State(5), a_transition));
-            assert!(has_transition(&nfa, State(5), State(1), EPSILON_TRANSITION));
+            assert!(has_transition(
+                &nfa,
+                State(5),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
             assert!(has_transition(&nfa, State(5), State(6), a_transition));
-            assert!(has_transition(&nfa, State(6), State(1), EPSILON_TRANSITION));
+            assert!(has_transition(
+                &nfa,
+                State(6),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
 
             assert_eq!(nfa.states.len(), 7);
         }
@@ -832,21 +995,61 @@ mod tests {
         let parsed_ast = parser.parse_into_ast(r"(\s|\d)+")?;
 
         let mut nfa = NFA::new();
-        nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-        assert!(has_transition(&nfa, State(0), State(2), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            NFA::START_STATE,
+            State(2),
+            EPSILON_TRANSITION
+        ));
         assert!(has_transition(&nfa, State(2), State(3), SPACE_TRANSITION));
-        assert!(has_transition(&nfa, State(3), State(1), EPSILON_TRANSITION));
-        assert!(has_transition(&nfa, State(0), State(4), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            State(3),
+            NFA::ACCEPT_STATE,
+            EPSILON_TRANSITION
+        ));
+        assert!(has_transition(
+            &nfa,
+            NFA::START_STATE,
+            State(4),
+            EPSILON_TRANSITION
+        ));
         assert!(has_transition(&nfa, State(4), State(5), DIGIT_TRANSITION));
-        assert!(has_transition(&nfa, State(5), State(1), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            State(5),
+            NFA::ACCEPT_STATE,
+            EPSILON_TRANSITION
+        ));
 
-        assert!(has_transition(&nfa, State(1), State(6), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            NFA::ACCEPT_STATE,
+            State(6),
+            EPSILON_TRANSITION
+        ));
         assert!(has_transition(&nfa, State(6), State(7), SPACE_TRANSITION));
-        assert!(has_transition(&nfa, State(7), State(1), EPSILON_TRANSITION));
-        assert!(has_transition(&nfa, State(1), State(8), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            State(7),
+            NFA::ACCEPT_STATE,
+            EPSILON_TRANSITION
+        ));
+        assert!(has_transition(
+            &nfa,
+            NFA::ACCEPT_STATE,
+            State(8),
+            EPSILON_TRANSITION
+        ));
         assert!(has_transition(&nfa, State(8), State(9), DIGIT_TRANSITION));
-        assert!(has_transition(&nfa, State(9), State(1), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            State(9),
+            NFA::ACCEPT_STATE,
+            EPSILON_TRANSITION
+        ));
 
         assert_eq!(nfa.states.len(), 10);
 
@@ -859,11 +1062,11 @@ mod tests {
         let parsed_ast = parser.parse_into_ast(r"[a-c3-9[A-X]]")?;
 
         let mut nfa = NFA::new();
-        nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
         assert!(has_transition(
             &nfa,
-            State(0),
+            NFA::START_STATE,
             State(2),
             Transition::convert_char_range_to_symbol_onehot_encoding(Some((b'a', b'c')))
         ));
@@ -876,7 +1079,7 @@ mod tests {
         assert!(has_transition(
             &nfa,
             State(3),
-            State(1),
+            NFA::ACCEPT_STATE,
             Transition::convert_char_range_to_symbol_onehot_encoding(Some((b'A', b'X')))
         ));
 
@@ -889,11 +1092,16 @@ mod tests {
         let parsed_ast = parser.parse_into_ast(r"\-{0,1}[0-9]+\.[0-9]+")?;
 
         let mut nfa = NFA::new();
-        nfa.add_ast_to_nfa(&parsed_ast, State(0), State(1))?;
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
         println!("{:?}", nfa);
 
-        assert!(has_transition(&nfa, State(0), State(2), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            NFA::START_STATE,
+            State(2),
+            EPSILON_TRANSITION
+        ));
         assert!(has_transition(
             &nfa,
             State(2),
@@ -912,8 +1120,18 @@ mod tests {
             Transition::convert_char_to_symbol_onehot_encoding('.')
         ));
 
-        assert!(has_transition(&nfa, State(5), State(1), DIGIT_TRANSITION));
-        assert!(has_transition(&nfa, State(1), State(1), DIGIT_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            State(5),
+            NFA::ACCEPT_STATE,
+            DIGIT_TRANSITION
+        ));
+        assert!(has_transition(
+            &nfa,
+            NFA::ACCEPT_STATE,
+            State(1),
+            DIGIT_TRANSITION
+        ));
 
         assert_eq!(nfa.states.len(), 6);
 
@@ -948,9 +1166,9 @@ mod tests {
         for _ in 0..=10 {
             _ = nfa.new_state();
         }
-        nfa.add_epsilon_transition(State(0), State(1));
-        nfa.add_epsilon_transition(State(1), State(2));
-        nfa.add_epsilon_transition(State(0), State(2));
+        nfa.add_epsilon_transition(NFA::START_STATE, NFA::ACCEPT_STATE);
+        nfa.add_epsilon_transition(NFA::ACCEPT_STATE, State(2));
+        nfa.add_epsilon_transition(NFA::START_STATE, State(2));
         nfa.add_transition(
             State(2),
             State(3),
@@ -961,10 +1179,10 @@ mod tests {
         nfa.add_epsilon_transition(State(4), State(6));
         nfa.add_epsilon_transition(State(6), State(3));
 
-        let closure = nfa.epsilon_closure(&vec![State(0)]);
+        let closure = nfa.epsilon_closure(&vec![NFA::START_STATE]);
         assert_eq!(closure.len(), 3);
-        assert_eq!(closure.contains(&State(0)), true);
-        assert_eq!(closure.contains(&State(1)), true);
+        assert_eq!(closure.contains(&NFA::START_STATE), true);
+        assert_eq!(closure.contains(&NFA::ACCEPT_STATE), true);
         assert_eq!(closure.contains(&State(2)), true);
 
         let closure = nfa.epsilon_closure(&vec![State(3)]);
