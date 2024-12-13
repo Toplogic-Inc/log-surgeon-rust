@@ -355,21 +355,21 @@ impl DFA {
 }
 
 impl DfaSimulator {
-    fn new(dfa: Rc<DFA>) -> Self {
+    pub fn new(dfa: Rc<DFA>) -> Self {
         DfaSimulator {
             dfa: dfa.clone(),
             current_state: dfa.start.clone(),
         }
     }
 
-    fn reset_simulation(&mut self) {
+    pub fn reset_simulation(&mut self) {
         self.current_state = self.dfa.start.clone();
     }
 
     // Simulate the DFA with a single character
     // Returns the next state and whether the current state is a valid state
     // invalid state means that the DFA has reached a dead end
-    fn simulate_single_char(&mut self, input: char) -> (Option<usize>, bool) {
+    pub fn simulate_single_char(&mut self, input: char) -> (Option<usize>, bool) {
         let transitions = self.dfa.transitions.get(self.current_state.0);
 
         if transitions.is_none() {
