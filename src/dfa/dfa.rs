@@ -216,7 +216,7 @@ impl DFA {
 }
 
 impl DFA {
-    fn from_multiple_nfas(nfas: Vec<NFA>) -> DFA {
+    pub fn from_multiple_nfas(nfas: Vec<NFA>) -> DFA {
         // All of the nodes now have a pair of identifiers,
         // 1. the NFA index within the list of NFAs
         // 2. the NFA state index within the NFA
