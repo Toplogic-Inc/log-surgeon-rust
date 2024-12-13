@@ -1,7 +1,6 @@
-use crate::error_handling::Error;
 use crate::error_handling::Result;
 use crate::parser::regex_parser::parser::RegexParser;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -437,23 +436,6 @@ fn get_ascii_char(c: char) -> Result<u8> {
         return Err(NoneASCIICharacters);
     }
     Ok(c as u8)
-}
-
-// Test use only functions for DFA
-
-#[cfg(test)]
-impl NFA {
-    // pub fn test_extern_add_state(&mut self, state: State) {
-    //     self.add_state(state);
-    // }
-    //
-    // pub fn test_extern_add_transition(&mut self, transition: Transition) {
-    //     self.add_transition(transition);
-    // }
-    //
-    // pub fn test_extern_add_epsilon_transition(&mut self, from: State, to: State) {
-    //     self.add_epsilon_transition(from, to);
-    // }
 }
 
 #[cfg(test)]
