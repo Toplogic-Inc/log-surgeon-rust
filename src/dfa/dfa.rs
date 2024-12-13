@@ -1,5 +1,6 @@
 use crate::nfa::nfa::NFA;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::Rc;
 
@@ -18,12 +19,60 @@ struct Transition {
     tag: Option<Tag>,
 }
 
+impl Debug for Transition {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        if 0 == self.symbol_onehot_encoding {
+            return write!(
+                f,
+                "{:?} -> {:?}, symbol: {}",
+                self.from_state, self.to_state, "epsilon"
+            );
+        }
+
+        let mut char_vec: Vec<char> = Vec::new();
+        for i in 0..128u8 {
+            let mask = 1u128 << i;
+            if mask & self.symbol_onehot_encoding == mask {
+                char_vec.push(i as char);
+            }
+        }
+        write!(
+            f,
+            "{:?} -> {:?}, symbol: {:?}",
+            self.from_state, self.to_state, char_vec
+        )
+    }
+}
+
 pub(crate) struct DFA {
     start: State,
     accept: Vec<State>,
     states: Vec<State>,
     transitions: Vec<HashMap<u128, Transition>>, // from_state -> symbol -> to_state
     dfa_to_accepted_nfa_state_mapping: Vec<Option<(usize, crate::nfa::nfa::State)>>, // to determine which NFA gets matched
+}
+
+impl Debug for DFA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "NFA( start: {:?}, accept: {:?}, states: {:?}, transitions: {{\n",
+            self.start, self.accept, self.states
+        )?;
+
+        for state in &self.states {
+            let state_idx = state.0;
+            if self.transitions[state_idx].is_empty() {
+                continue;
+            }
+            write!(f, "\t{:?}:\n", state)?;
+            for (_, transition) in &self.transitions[state_idx] {
+                write!(f, "\t\t{:?}\n", transition)?;
+            }
+        }
+
+        write!(f, "}} )")
+    }
 }
 
 pub(crate) struct DfaSimulator {
@@ -640,6 +689,7 @@ mod tests {
         println!("{:?}", nfa);
 
         let dfa = DFA::from_multiple_nfas(vec![nfa]);
+        println!("{:?}", dfa);
 
         assert_eq!(dfa.simulate("0x0"), (Some(0usize), true));
         assert_eq!(dfa.simulate("0"), (Some(0usize), true));
