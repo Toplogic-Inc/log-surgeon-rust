@@ -4,6 +4,7 @@ use regex_syntax::ast;
 pub enum Error {
     RegexParsingError(ast::Error),
     YamlParsingError(serde_yaml::Error),
+    IOError(std::io::Error),
     UnsupportedAstNodeType(&'static str),
     NoneASCIICharacters,
     NegationNotSupported(&'static str),

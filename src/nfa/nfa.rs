@@ -36,14 +36,10 @@ pub struct Transition {
 impl Debug for Transition {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if 0 == self.symbol_onehot_encoding {
-            return write!(
-                f,
-                "{:?} -> {:?}, symbol: {}",
-                self.from, self.to, "epsilon"
-            );
+            return write!(f, "{:?} -> {:?}, symbol: {}", self.from, self.to, "epsilon");
         }
 
-        let mut char_vec : Vec<char> = Vec::new();
+        let mut char_vec: Vec<char> = Vec::new();
         for i in 0..128u8 {
             let mask = 1u128 << i;
             if mask & self.symbol_onehot_encoding == mask {

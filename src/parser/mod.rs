@@ -1,2 +1,2 @@
 pub(crate) mod regex_parser;
-mod schema_parser;
+pub(crate) mod schema_parser;

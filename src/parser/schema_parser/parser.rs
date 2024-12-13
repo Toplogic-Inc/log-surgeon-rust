@@ -1,11 +1,12 @@
 use crate::error_handling::Error::{
-    InvalidSchema, MissingSchemaKey, NoneASCIICharacters, YamlParsingError,
+    IOError, InvalidSchema, MissingSchemaKey, NoneASCIICharacters, YamlParsingError,
 };
 use crate::error_handling::Result;
 use crate::parser::regex_parser::parser::RegexParser;
 use regex_syntax::ast::Ast;
 use serde_yaml::Value;
 use std::collections::{HashMap, HashSet};
+use std::io::Read;
 
 pub struct TimestampSchema {
     regex: String,
@@ -78,20 +79,36 @@ impl ParsedSchema {
         &self.schemas
     }
 
-    pub fn has_delimiter(&self, delimiter: u8) -> bool {
-        self.delimiters.contains(&delimiter)
+    pub fn has_delimiter(&self, delimiter: char) -> bool {
+        if false == delimiter.is_ascii() {
+            return false;
+        }
+        self.delimiters.contains(&(delimiter as u8))
     }
 }
 
 impl ParsedSchema {
     const TIMESTAMP_KEY: &'static str = "timestamp";
     const VAR_KEY: &'static str = "variables";
-    const DELIMITER_EKY: &'static str = "delimiter";
+    const DELIMITER_EKY: &'static str = "delimiters";
 
     pub fn parse_from_str(yaml_content: &str) -> Result<ParsedSchema> {
         match Self::load_kv_pairs_from_yaml_content(yaml_content) {
             Ok(kv_pairs) => Self::load_from_kv_pairs(kv_pairs),
             Err(e) => Err(YamlParsingError(e)),
+        }
+    }
+
+    pub fn parse_from_file(yaml_file_path: &str) -> Result<ParsedSchema> {
+        match std::fs::File::open(yaml_file_path) {
+            Ok(mut file) => {
+                let mut contents = String::new();
+                if let Err(e) = file.read_to_string(&mut contents) {
+                    return Err(IOError(e));
+                }
+                Self::parse_from_str(contents.as_str())
+            }
+            Err(e) => Err(IOError(e)),
         }
     }
 
@@ -160,5 +177,38 @@ impl ParsedSchema {
             delimiters,
             schemas,
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_example_schema_file() -> Result<()> {
+        let project_root = env!("CARGO_MANIFEST_DIR");
+        let schema_path = std::path::Path::new(project_root)
+            .join("examples")
+            .join("schema.yaml");
+        let parsed_schema = ParsedSchema::parse_from_file(schema_path.to_str().unwrap())?;
+
+        assert_eq!(parsed_schema.get_schemas().len(), 7);
+        for (schema_id, schema) in parsed_schema.get_schemas().iter().enumerate() {
+            match schema {
+                Schema::Timestamp(schema) => {
+                    assert!(schema_id < 3)
+                }
+                Schema::Var(schema) => {
+                    assert!(schema_id >= 3)
+                }
+            }
+        }
+
+        let delimiters: Vec<char> = vec!['\t', '\n', '\r', ':', ',', '!', ';', '%'];
+        for delimiter in delimiters {
+            assert!(parsed_schema.has_delimiter(delimiter));
+        }
+
+        Ok(())
     }
 }
