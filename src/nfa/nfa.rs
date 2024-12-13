@@ -35,10 +35,25 @@ pub struct Transition {
 
 impl Debug for Transition {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        if 0 == self.symbol_onehot_encoding {
+            return write!(
+                f,
+                "{:?} -> {:?}, symbol: {}",
+                self.from, self.to, "epsilon"
+            );
+        }
+
+        let mut char_vec : Vec<char> = Vec::new();
+        for i in 0..128u8 {
+            let mask = 1u128 << i;
+            if mask & self.symbol_onehot_encoding == mask {
+                char_vec.push(i as char);
+            }
+        }
         write!(
             f,
             "{:?} -> {:?}, symbol: {:?}",
-            self.from, self.to, self.symbol_onehot_encoding
+            self.from, self.to, char_vec
         )
     }
 }
@@ -364,12 +379,17 @@ impl Debug for NFA {
             "NFA( start: {:?}, accept: {:?}, states: {:?}, transitions: {{\n",
             self.start, self.accept, self.states
         )?;
-        for (state, transitions) in &self.transitions {
+
+        for state in &self.states {
+            if false == self.transitions.contains_key(state) {
+                continue;
+            }
             write!(f, "\t{:?}:\n", state)?;
-            for transition in transitions {
+            for transition in self.transitions.get(state).unwrap() {
                 write!(f, "\t\t{:?}\n", transition)?;
             }
         }
+
         write!(f, "}} )")
     }
 }
@@ -1071,7 +1091,7 @@ mod tests {
     #[test]
     fn test_floating_point_regex() -> Result<()> {
         let mut parser = RegexParser::new();
-        let parsed_ast = parser.parse_into_ast(r"\-{0,1}[0-9]+\.[0-9]+")?;
+        let parsed_ast = parser.parse_into_ast(r"\-{0,1}[0-9]+\.\d+")?;
 
         let mut nfa = NFA::new();
         nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;

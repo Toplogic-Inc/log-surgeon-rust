@@ -3,6 +3,7 @@ use regex_syntax::ast;
 #[derive(Debug)]
 pub enum Error {
     RegexParsingError(ast::Error),
+    YamlParsingError(serde_yaml::Error),
     UnsupportedAstNodeType(&'static str),
     NoneASCIICharacters,
     NegationNotSupported(&'static str),
@@ -10,6 +11,8 @@ pub enum Error {
     UnsupportedAstBracketedKind,
     UnsupportedClassSetType,
     UnsupportedGroupKindType,
+    MissingSchemaKey(&'static str),
+    InvalidSchema,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

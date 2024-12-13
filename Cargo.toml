@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 regex-syntax = "0.8.5"
+serde_yaml = "0.9.34"

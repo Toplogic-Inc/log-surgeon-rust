@@ -580,4 +580,80 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_int() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"\-{0,1}\d+")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa]);
+
+        assert_eq!(dfa.simulate("0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("1234"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("-1234"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("-0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("aba"), (None, false));
+        assert_eq!(dfa.simulate(""), (None, false));
+        assert_eq!(dfa.simulate("3.14"), (None, false));
+        assert_eq!(dfa.simulate("0.00"), (None, false));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_float() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"\-{0,1}[0-9]+\.\d+")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa]);
+
+        assert_eq!(dfa.simulate("0.0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("-0.0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("-0.00001"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("0.00001"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("3.1415926"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("-3.1415926"), (Some(0usize), true));
+
+        assert_eq!(dfa.simulate("0"), (None, false));
+        assert_eq!(dfa.simulate("1234"), (None, false));
+        assert_eq!(dfa.simulate("-1234"), (None, false));
+        assert_eq!(dfa.simulate("-0"), (None, false));
+        assert_eq!(dfa.simulate("aba"), (None, false));
+        assert_eq!(dfa.simulate(""), (None, false));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_hex() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"(0x){0,1}(((\d|[a-f])+)|((\d|[A-F])+))")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+        println!("{:?}", nfa);
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa]);
+
+        assert_eq!(dfa.simulate("0x0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("1234"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("0x1A2B3C4D5E6F7890"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("0x1a2b3c4d5e6f7890"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("1a2b3c4d5e6f7890"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("abcdef"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("abcdefg"), (None, false));
+        assert_eq!(dfa.simulate("aBa"), (None, false));
+        assert_eq!(dfa.simulate(""), (None, false));
+        assert_eq!(dfa.simulate("3.14"), (None, false));
+        assert_eq!(dfa.simulate("0.00"), (None, false));
+
+        Ok(())
+    }
 }
