@@ -2,7 +2,6 @@ use crate::nfa::nfa::NFA;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::rc::Rc;
-use std::sync::Arc;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct State(usize);
@@ -354,9 +353,11 @@ impl DfaSimulator {
 #[cfg(test)]
 mod tests {
     use crate::dfa::dfa::{State, DFA};
+    use crate::error_handling::Result;
     use crate::nfa::nfa::NFA;
+    use crate::parser::regex_parser::parser::RegexParser;
     use crate::{dfa, nfa};
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
     use std::rc::Rc;
 
     #[test]
@@ -388,136 +389,43 @@ mod tests {
         assert_eq!(dfa.simulate("ba"), (None, false));
     }
 
-    #[cfg(test)]
-    fn create_nfa1() -> NFA {
-        // input NFA
-        // 0 -> 1 epsilon
-        // 0 -> 2 epsilon
-        // 1 -> 3 a
-        // 2 -> 4 a
-        // 3 -> 5 b
-        // 4 -> 6 epsilon
-        // 5 -> 6 epsilon
-        // 0: start state
-        // 6: accept state
+    fn create_nfa1() -> Result<NFA> {
         // Should only match "a" or "ab"
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast("(a)|(ab)")?;
 
-        let mut nfa = NFA::new(nfa::nfa::State(0), nfa::nfa::State(6));
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-        for i in 1..=6 {
-            nfa.test_extern_add_state(nfa::nfa::State(i));
-        }
-
-        nfa.test_extern_add_epsilon_transition(nfa::nfa::State(0), nfa::nfa::State(1));
-        nfa.test_extern_add_epsilon_transition(nfa::nfa::State(0), nfa::nfa::State(2));
-
-        nfa.test_extern_add_transition(nfa::nfa::Transition::new(
-            nfa::nfa::State(1),
-            nfa::nfa::State(3),
-            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('a'),
-            -1,
-        ));
-
-        nfa.test_extern_add_transition(nfa::nfa::Transition::new(
-            nfa::nfa::State(2),
-            nfa::nfa::State(4),
-            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('a'),
-            -1,
-        ));
-
-        nfa.test_extern_add_transition(nfa::nfa::Transition::new(
-            nfa::nfa::State(3),
-            nfa::nfa::State(5),
-            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('b'),
-            -1,
-        ));
-
-        nfa.test_extern_add_epsilon_transition(nfa::nfa::State(5), nfa::nfa::State(6));
-        nfa.test_extern_add_epsilon_transition(nfa::nfa::State(4), nfa::nfa::State(6));
-
-        nfa
+        Ok(nfa)
     }
 
-    #[cfg(test)]
-    fn create_nfa2() -> NFA {
-        // input NFA
-        // 0 -> 1 epsilon
-        // 1 -> 1 c
-        // 1 -> 2 epsilon
+    fn create_nfa2() -> Result<NFA> {
         // Should match "c*"
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast("c*")?;
 
-        let mut nfa = NFA::new(nfa::nfa::State(0), nfa::nfa::State(2));
-        nfa.test_extern_add_state(nfa::nfa::State(9));
-        nfa.test_extern_add_state(nfa::nfa::State(1));
-        nfa.test_extern_add_state(nfa::nfa::State(2));
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-        nfa.test_extern_add_epsilon_transition(nfa::nfa::State(0), nfa::nfa::State(1));
-        nfa.test_extern_add_epsilon_transition(nfa::nfa::State(1), nfa::nfa::State(2));
-        nfa.test_extern_add_transition(nfa::nfa::Transition::new(
-            nfa::nfa::State(1),
-            nfa::nfa::State(1),
-            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('c'),
-            -1,
-        ));
-
-        nfa
+        Ok(nfa)
     }
 
-    #[cfg(test)]
-    fn create_nfa3() -> NFA {
-        // input NFA
-        // 0 -> 1 epsilon
-        // 1 -> 2 c
-        // 2 -> 2 c
-        // 2 -> 3 a
-        // 3 -> 4 b
-        // 4 -> 5 epsilon
+    fn create_nfa3() -> crate::error_handling::Result<NFA> {
         // Should match "c+ab"
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast("c+ab")?;
 
-        let mut nfa = NFA::new(nfa::nfa::State(0), nfa::nfa::State(5));
-        for i in 1..=5 {
-            nfa.test_extern_add_state(nfa::nfa::State(i));
-        }
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
-        nfa.test_extern_add_epsilon_transition(nfa::nfa::State(0), nfa::nfa::State(1));
-        nfa.test_extern_add_epsilon_transition(nfa::nfa::State(4), nfa::nfa::State(5));
-
-        nfa.test_extern_add_transition(nfa::nfa::Transition::new(
-            nfa::nfa::State(1),
-            nfa::nfa::State(2),
-            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('c'),
-            -1,
-        ));
-        nfa.test_extern_add_transition(nfa::nfa::Transition::new(
-            nfa::nfa::State(2),
-            nfa::nfa::State(2),
-            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('c'),
-            -1,
-        ));
-        nfa.test_extern_add_transition(nfa::nfa::Transition::new(
-            nfa::nfa::State(2),
-            nfa::nfa::State(3),
-            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('a'),
-            -1,
-        ));
-        nfa.test_extern_add_transition(nfa::nfa::Transition::new(
-            nfa::nfa::State(3),
-            nfa::nfa::State(4),
-            nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding('b'),
-            -1,
-        ));
-
-        nfa
+        Ok(nfa)
     }
 
     #[test]
-    fn test_nfa1_from_nfa_to_dfa() {
-        let nfa = create_nfa1();
+    fn test_nfa1_from_nfa_to_dfa() -> Result<()> {
+        let nfa = create_nfa1()?;
         let dfa = DFA::from_multiple_nfas(vec![nfa]);
-
-        // 0 1 2 : 0
-        // 3 4 6 : 1
-        // 5 6 : 2
 
         assert_eq!(dfa.start, dfa::dfa::State(0));
         assert_eq!(dfa.accept.len(), 2);
@@ -550,11 +458,14 @@ mod tests {
         assert_eq!(dfa.simulate("aa"), (None, false));
         assert_eq!(dfa.simulate("abb"), (None, false));
         assert_eq!(dfa.simulate("aba"), (None, false));
+
+        Ok(())
     }
 
     #[test]
-    fn test_nfa2_from_nfa_to_dfa() {
-        let nfa = create_nfa2();
+    fn test_nfa2_from_nfa_to_dfa() -> crate::error_handling::Result<()> {
+        let nfa = create_nfa2()?;
+        println!("{:?}", nfa);
         let dfa = DFA::from_multiple_nfas(vec![nfa]);
 
         // Check correctness given some examples
@@ -565,11 +476,13 @@ mod tests {
         assert_eq!(dfa.simulate("ccccab"), (None, false));
         assert_eq!(dfa.simulate("cab"), (None, false));
         assert_eq!(dfa.simulate(""), (Some(0usize), true));
+
+        Ok(())
     }
 
     #[test]
-    fn test_nfa3_from_nfa_to_dfa() {
-        let nfa = create_nfa3();
+    fn test_nfa3_from_nfa_to_dfa() -> Result<()> {
+        let nfa = create_nfa3()?;
         let dfa = DFA::from_multiple_nfas(vec![nfa]);
 
         // Check correctness given some examples
@@ -581,13 +494,15 @@ mod tests {
         assert_eq!(dfa.simulate("cab"), (Some(0usize), true));
         assert_eq!(dfa.simulate("ab"), (None, false));
         assert_eq!(dfa.simulate(""), (None, false));
+
+        Ok(())
     }
 
     #[test]
-    fn test_easy_from_multi_nfas_to_dfa() {
-        let nfa1 = create_nfa1();
-        let nfa2 = create_nfa2();
-        let nfa3 = create_nfa3();
+    fn test_easy_from_multi_nfas_to_dfa() -> Result<()> {
+        let nfa1 = create_nfa1()?;
+        let nfa2 = create_nfa2()?;
+        let nfa3 = create_nfa3()?;
 
         let dfa = DFA::from_multiple_nfas(vec![nfa1, nfa2, nfa3]);
 
@@ -609,13 +524,15 @@ mod tests {
         assert_eq!(dfa.simulate("cccccab"), (Some(2usize), true));
         assert_eq!(dfa.simulate("cab"), (Some(2usize), true));
         assert_eq!(dfa.simulate(""), (Some(1usize), true));
+
+        Ok(())
     }
 
     #[test]
-    fn test_esay_from_multi_nfas_to_dfa_single_char_simulation() {
-        let nfa1 = create_nfa1();
-        let nfa2 = create_nfa2();
-        let nfa3 = create_nfa3();
+    fn test_esay_from_multi_nfas_to_dfa_single_char_simulation() -> Result<()> {
+        let nfa1 = create_nfa1()?;
+        let nfa2 = create_nfa2()?;
+        let nfa3 = create_nfa3()?;
 
         let dfa = DFA::from_multiple_nfas(vec![nfa1, nfa2, nfa3]);
 
@@ -660,5 +577,7 @@ mod tests {
             (Some(1usize), true)
         );
         assert_eq!(dfa_simulator.simulate_single_char('b'), (None, false));
+
+        Ok(())
     }
 }
