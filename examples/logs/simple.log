@@ -1,4 +1,7 @@
+This log event doesn't have a timestamp
 2015-01-31T15:50:45.392 Id: 3190; This is a
-multi-line log event
+multi-line log event: 这是一个有多行的日志
 2015-01-31T15:50:45.393 Id: 0; This is a multi-line log event. I will pay
-you 1000 dollar to test this file.
+you 1000 dollars to test this file.
+2015-01-31T15:50:45.392 Id: 0; This is a variable=0
+2015-01-31T15:50:45.392 Id: 0; But this is:0
