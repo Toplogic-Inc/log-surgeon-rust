@@ -55,35 +55,26 @@ impl VarSchema {
     }
 }
 
-pub enum Schema {
-    Timestamp(TimestampSchema),
-    Var(VarSchema),
-}
-
-impl Schema {
-    pub fn get_ast(&self) -> &Ast {
-        match self {
-            Schema::Timestamp(schema) => schema.get_ast(),
-            Schema::Var(schema) => schema.get_ast(),
-        }
-    }
-}
-
 pub struct ParsedSchema {
-    pub schemas: Vec<Schema>,
-    pub delimiters: HashSet<u8>,
+    ts_schemas: Vec<TimestampSchema>,
+    var_schemas: Vec<VarSchema>,
+    delimiters: [bool; 128],
 }
 
 impl ParsedSchema {
-    pub fn get_schemas(&self) -> &Vec<Schema> {
-        &self.schemas
+    pub fn get_ts_schemas(&self) -> &Vec<TimestampSchema> {
+        &self.ts_schemas
+    }
+
+    pub fn get_var_schemas(&self) -> &Vec<VarSchema> {
+        &self.var_schemas
     }
 
     pub fn has_delimiter(&self, delimiter: char) -> bool {
         if false == delimiter.is_ascii() {
             return false;
         }
-        self.delimiters.contains(&(delimiter as u8))
+        self.delimiters[delimiter as usize]
     }
 }
 
@@ -127,15 +118,13 @@ impl ParsedSchema {
     }
 
     fn load_from_kv_pairs(kv_pairs: HashMap<String, Value>) -> Result<Self> {
-        let mut delimiters: HashSet<u8> = HashSet::new();
-        let mut schemas: Vec<Schema> = Vec::new();
-
         // Handle timestamps
+        let mut ts_schemas: Vec<TimestampSchema> = Vec::new();
         let timestamps = Self::get_key_value(&kv_pairs, Self::TIMESTAMP_KEY)?;
         if let Value::Sequence(sequence) = timestamps {
             sequence.iter().try_for_each(|val| {
                 if let Value::String(s) = val {
-                    schemas.push(Schema::Timestamp(TimestampSchema::new(s.clone())?));
+                    ts_schemas.push(TimestampSchema::new(s.clone())?);
                     Ok(())
                 } else {
                     Err(InvalidSchema)
@@ -146,12 +135,13 @@ impl ParsedSchema {
         }
 
         // Handle variables
+        let mut var_schemas: Vec<VarSchema> = Vec::new();
         let vars = Self::get_key_value(&kv_pairs, Self::VAR_KEY)?;
         if let Value::Mapping(map) = vars {
             for (key, value) in map {
                 match (key, value) {
                     (Value::String(name), Value::String(regex)) => {
-                        schemas.push(Schema::Var(VarSchema::new(name.clone(), regex.clone())?));
+                        var_schemas.push(VarSchema::new(name.clone(), regex.clone())?);
                     }
                     _ => return Err(InvalidSchema),
                 }
@@ -161,21 +151,24 @@ impl ParsedSchema {
         }
 
         // Handle delimiter
+        let mut delimiters = [false; 128];
         let delimiter = Self::get_key_value(&kv_pairs, Self::DELIMITER_EKY)?;
         if let Value::String(delimiter_str) = delimiter {
             for c in delimiter_str.chars() {
                 if false == c.is_ascii() {
                     return Err(NoneASCIICharacters);
                 }
-                delimiters.insert(c as u8);
+                delimiters[c as usize] = true;
             }
         } else {
             return Err(InvalidSchema);
         }
+        delimiters['\n' as usize] = true;
 
         Ok((Self {
+            ts_schemas,
+            var_schemas,
             delimiters,
-            schemas,
         }))
     }
 }
@@ -192,19 +185,10 @@ mod tests {
             .join("schema.yaml");
         let parsed_schema = ParsedSchema::parse_from_file(schema_path.to_str().unwrap())?;
 
-        assert_eq!(parsed_schema.get_schemas().len(), 7);
-        for (schema_id, schema) in parsed_schema.get_schemas().iter().enumerate() {
-            match schema {
-                Schema::Timestamp(schema) => {
-                    assert!(schema_id < 3)
-                }
-                Schema::Var(schema) => {
-                    assert!(schema_id >= 3)
-                }
-            }
-        }
+        assert_eq!(parsed_schema.get_ts_schemas().len(), 3);
+        assert_eq!(parsed_schema.get_var_schemas().len(), 4);
 
-        let delimiters: Vec<char> = vec!['\t', '\n', '\r', ':', ',', '!', ';', '%'];
+        let delimiters: Vec<char> = vec![' ', '\t', '\n', '\r', ':', ',', '!', ';', '%'];
         for delimiter in delimiters {
             assert!(parsed_schema.has_delimiter(delimiter));
         }

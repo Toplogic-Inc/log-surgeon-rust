@@ -13,6 +13,9 @@ pub enum Error {
     UnsupportedClassSetType,
     UnsupportedGroupKindType,
     MissingSchemaKey(&'static str),
+    LexerInputStreamNotSet,
+    LexerStateUnknown,
+    LexerInternalErr(&'static str),
     InvalidSchema,
 }
 

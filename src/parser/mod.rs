@@ -1,2 +1,6 @@
 pub(crate) mod regex_parser;
-pub(crate) mod schema_parser;
+
+mod schema_parser;
+pub use schema_parser::parser::ParsedSchema;
+pub use schema_parser::parser::TimestampSchema;
+pub use schema_parser::parser::VarSchema;

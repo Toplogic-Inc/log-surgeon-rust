@@ -5,7 +5,7 @@ use std::hash::Hash;
 use std::rc::Rc;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-struct State(usize);
+pub struct State(usize);
 
 enum Tag {
     Start(usize),
@@ -216,6 +216,28 @@ impl DFA {
 }
 
 impl DFA {
+    pub fn get_next_state(&self, state: State, c: u8) -> Option<State> {
+        // No bound check
+        let transitions = &self.transitions[state.0];
+        let mask = 1u128 << c;
+        for (transition_symbol, transition) in transitions.iter() {
+            if mask & transition_symbol == mask {
+                return Some(transition.to_state.clone());
+            }
+        }
+        None
+    }
+
+    pub fn is_accept_state(&self, state: State) -> Option<usize> {
+        self.get_accept_nfa_state(state.0)
+    }
+
+    pub fn get_root(&self) -> State {
+        self.start.clone()
+    }
+}
+
+impl DFA {
     pub fn from_multiple_nfas(nfas: Vec<NFA>) -> DFA {
         // All of the nodes now have a pair of identifiers,
         // 1. the NFA index within the list of NFAs
@@ -315,7 +337,6 @@ impl DFA {
                 if !l_nfa_states_to_dfa_mapping.contains_key(&destination_nfa_states) {
                     // We need to add a new state to the DFA
                     let destination_dfa_state_idx = dfa_states.len();
-                    println!("Inserting State {}", destination_dfa_state_idx);
 
                     dfa_states.push(State(destination_dfa_state_idx));
                     dfa_transitions.push(HashMap::new());
