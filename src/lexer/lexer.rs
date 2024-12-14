@@ -125,150 +125,92 @@ impl<'a> Lexer<'a> {
     fn fill_token_queue(&mut self) -> Result<()> {
         loop {
             match self.state {
-                LexerState::SeekingToTheNextDelimiter => {
-                    // TODO: we can skip all non-starting chars
-                    let optional_c = self.get_next_char_from_buffer()?;
-                    if optional_c.is_none() {
+                LexerState::SeekingToTheNextDelimiter => match self.get_next_char_from_buffer()? {
+                    Some(c) => {
+                        if self.schema_mgr.has_delimiter(c) {
+                            self.last_delimiter = Some(c);
+                            self.state = LexerState::HandleDelimiter;
+                        }
+                    }
+                    None => {
                         self.state = LexerState::EndOfStream;
-                        continue;
                     }
-                    self.increment_buffer_cursor_pos();
-                    let c = optional_c.unwrap();
-                    if self.schema_mgr.has_delimiter(c) {
-                        self.last_delimiter = Some(c);
-                        self.state = LexerState::HandleDelimiter;
-                    }
-                }
+                },
 
                 LexerState::HandleDelimiter => {
-                    let delimiter = self.last_delimiter.unwrap();
-                    self.last_delimiter = None;
-                    if '\n' != delimiter {
-                        self.state = LexerState::DFANotAccepted;
-                        self.match_start_pos = self.buf_cursor_pos;
-                        self.dfa_state = self.var_dfa.get_root();
-                        continue;
+                    if self.last_delimiter.is_none() {
+                        return Err(LexerInternalErr("Delimiter not set"));
                     }
 
-                    if self.last_tokenized_pos >= self.buf_cursor_pos {
-                        return Err(LexerInternalErr("Delimiter position corrupted"));
+                    let delimiter = self.last_delimiter.unwrap();
+                    self.last_delimiter = None;
+                    match delimiter {
+                        '\n' => {
+                            self.generate_token(
+                                self.buf_cursor_pos,
+                                TokenType::StaticTextWithEndLine,
+                            )?;
+                            self.line_num += 1;
+                            self.state = LexerState::ParsingTimestamp;
+                        }
+                        _ => self.proceed_to_var_dfa_simulation(),
                     }
-                    self.token_queue.push_back(Token {
-                        val: self.buf[self.last_tokenized_pos..self.buf_cursor_pos]
-                            .iter()
-                            .collect(),
-                        line_num: self.line_num,
-                        token_type: TokenType::StaticTextWithEndLine,
-                    });
-                    self.last_tokenized_pos = self.buf_cursor_pos;
-                    self.line_num += 1;
-                    self.state = LexerState::ParsingTimestamp;
                 }
 
                 LexerState::ParsingTimestamp => {
-                    self.state = if self.try_parse_timestamp()? {
-                        LexerState::SeekingToTheNextDelimiter
+                    if self.try_parse_timestamp()? {
+                        self.state = LexerState::SeekingToTheNextDelimiter;
                     } else {
-                        LexerState::DFANotAccepted
+                        self.proceed_to_var_dfa_simulation();
                     }
                 }
 
-                LexerState::DFANotAccepted => {
-                    let optional_c = self.get_next_char_from_buffer()?;
-                    if optional_c.is_none() {
-                        self.state = LexerState::EndOfStream;
-                        continue;
+                LexerState::DFANotAccepted => match self.get_next_char_from_buffer()? {
+                    Some(c) => {
+                        self.simulate_var_dfa_and_set_lexer_state(c, LexerState::HandleDelimiter)
                     }
-                    let c = optional_c.unwrap();
-                    if false == c.is_ascii() || self.schema_mgr.has_delimiter(c) {
-                        self.state = LexerState::SeekingToTheNextDelimiter;
-                        continue;
-                    }
-
-                    // NOTE: consume the char only if we're sure it's not delimiter
-                    self.increment_buffer_cursor_pos();
-                    let optional_next_dfa_state =
-                        self.var_dfa.get_next_state(self.dfa_state.clone(), c as u8);
-                    if optional_next_dfa_state.is_none() {
-                        self.state = LexerState::SeekingToTheNextDelimiter;
-                        continue;
-                    }
-
-                    self.dfa_state = optional_next_dfa_state.unwrap();
-                    match self.var_dfa.is_accept_state(self.dfa_state.clone()) {
-                        Some(_) => self.state = LexerState::DFAAccepted,
-                        None => self.state = LexerState::DFANotAccepted,
-                    }
-                }
+                    None => self.state = LexerState::EndOfStream,
+                },
 
                 LexerState::DFAAccepted => {
                     // Set match end (exclusive to the matched position)
                     self.match_end_pos = self.buf_cursor_pos;
-
-                    let optional_c = self.get_next_char_from_buffer()?;
-                    if optional_c.is_none() {
-                        self.state = LexerState::VarExtract;
-                        continue;
-                    }
-
-                    self.increment_buffer_cursor_pos();
-                    let c = optional_c.unwrap();
-                    if self.schema_mgr.has_delimiter(c) {
-                        self.last_delimiter = Some(c);
-                        self.state = LexerState::VarExtract;
-                        continue;
-                    }
-
-                    let optional_next_dfa_state = if c.is_ascii() {
-                        self.var_dfa.get_next_state(self.dfa_state.clone(), c as u8)
-                    } else {
-                        None
-                    };
-                    if optional_next_dfa_state.is_none() {
-                        self.state = LexerState::SeekingToTheNextDelimiter;
-                        continue;
-                    }
-
-                    self.dfa_state = optional_next_dfa_state.unwrap();
-                    match self.var_dfa.is_accept_state(self.dfa_state.clone()) {
-                        Some(_) => self.state = LexerState::DFAAccepted,
-                        None => self.state = LexerState::DFANotAccepted,
+                    match self.get_next_char_from_buffer()? {
+                        Some(c) => {
+                            self.simulate_var_dfa_and_set_lexer_state(c, LexerState::VarExtract)
+                        }
+                        None => self.state = LexerState::VarExtract,
                     }
                 }
 
                 LexerState::VarExtract => {
-                    // Extract static text
-                    if self.match_start_pos > self.last_tokenized_pos {
-                        let static_text: String = self.buf
-                            [self.last_tokenized_pos..self.match_start_pos]
-                            .iter()
-                            .collect();
-                        self.token_queue.push_back(Token {
-                            val: static_text,
-                            line_num: self.line_num,
-                            token_type: TokenType::StaticText,
-                        });
+                    if self.match_start_pos >= self.match_end_pos {
+                        return Err(LexerInternalErr("Match end positions corrupted"));
+                    }
+                    if self.last_tokenized_pos > self.buf_cursor_pos {
+                        return Err(LexerInternalErr("Match start position corrupted"));
+                    }
+
+                    // Extract static text (if any)
+                    if self.match_start_pos != self.last_tokenized_pos {
+                        self.generate_token(self.match_start_pos, TokenType::StaticText)?;
                     }
 
                     // Extract variable
-                    if self.match_start_pos >= self.match_end_pos {
-                        return Err(LexerInternalErr("Match positions corrupted"));
+                    match self.var_dfa.is_accept_state(self.dfa_state.clone()) {
+                        Some(schema_id) => {
+                            assert_eq!(self.match_start_pos, self.last_tokenized_pos);
+                            self.generate_token(
+                                self.match_end_pos,
+                                TokenType::Variable(schema_id),
+                            )?;
+                        }
+                        None => {
+                            return Err(LexerInternalErr(
+                                "DFA state doesn't stop in an accepted state",
+                            ))
+                        }
                     }
-                    let optional_schema_id = self.var_dfa.is_accept_state(self.dfa_state.clone());
-                    if optional_schema_id.is_none() {
-                        return Err(LexerInternalErr(
-                            "DFA state doesn't stop in an accepted state",
-                        ));
-                    }
-                    let schema_id = optional_schema_id.unwrap();
-                    self.token_queue.push_back(Token {
-                        val: self.buf[self.match_start_pos..self.match_end_pos]
-                            .iter()
-                            .collect(),
-                        line_num: self.line_num,
-                        token_type: TokenType::Variable(schema_id),
-                    });
-                    self.last_tokenized_pos = self.match_end_pos;
 
                     match self.last_delimiter {
                         Some(_) => self.state = LexerState::HandleDelimiter,
@@ -278,20 +220,15 @@ impl<'a> Lexer<'a> {
 
                 LexerState::EndOfStream => {
                     if self.buf_cursor_pos > self.last_tokenized_pos {
-                        self.token_queue.push_back(Token {
-                            val: self.buf[self.last_tokenized_pos..self.buf_cursor_pos]
-                                .iter()
-                                .collect(),
-                            line_num: self.line_num,
-                            token_type: if self.last_delimiter.is_some()
-                                && self.last_delimiter.unwrap() == '\n'
-                            {
-                                // TODO: This seems not possible..
-                                TokenType::StaticTextWithEndLine
-                            } else {
-                                TokenType::StaticText
-                            },
-                        })
+                        let token_type = if self.last_delimiter.is_some()
+                            && self.last_delimiter.unwrap() == '\n'
+                        {
+                            // TODO: This seems not possible..
+                            TokenType::StaticTextWithEndLine
+                        } else {
+                            TokenType::StaticText
+                        };
+                        self.generate_token(self.buf_cursor_pos, token_type)?;
                     }
                     break;
                 }
@@ -307,8 +244,11 @@ impl<'a> Lexer<'a> {
     }
 
     fn try_parse_timestamp(&mut self) -> Result<bool> {
+        let buf_cursor_pos_bookmark = self.buf_cursor_pos;
+        if buf_cursor_pos_bookmark != self.last_tokenized_pos {
+            return Err(LexerInternalErr("Timestamp parsing corrupted"));
+        }
         let mut curr_dfa_state = self.ts_dfa.get_root();
-        let curr_buf_cursor_pos = self.buf_cursor_pos;
 
         // (Timestamp schema ID, position)
         let mut last_matched: Option<(usize, usize)> = None;
@@ -319,7 +259,6 @@ impl<'a> Lexer<'a> {
                 break;
             }
 
-            self.increment_buffer_cursor_pos();
             let c = optional_c.unwrap();
             if false == c.is_ascii() {
                 break;
@@ -339,17 +278,12 @@ impl<'a> Lexer<'a> {
 
         match last_matched {
             Some((ts_schema_id, pos)) => {
-                self.token_queue.push_back(Token {
-                    val: self.buf[curr_buf_cursor_pos..pos].iter().collect(),
-                    line_num: self.line_num,
-                    token_type: TokenType::Timestamp(ts_schema_id),
-                });
-                self.last_tokenized_pos = pos;
+                self.generate_token(pos, TokenType::Timestamp(ts_schema_id))?;
                 self.buf_cursor_pos = pos;
                 Ok(true)
             }
             None => {
-                self.buf_cursor_pos = curr_buf_cursor_pos;
+                self.buf_cursor_pos = buf_cursor_pos_bookmark;
                 Ok(false)
             }
         }
@@ -369,11 +303,68 @@ impl<'a> Lexer<'a> {
                 None => return Ok(None),
             }
         }
-        Ok(Some(self.buf[self.buf_cursor_pos]))
+        let pos = self.get_and_increment_buf_cursor_pos();
+        Ok(Some(self.buf[pos]))
     }
 
-    fn increment_buffer_cursor_pos(&mut self) {
-        self.buf_cursor_pos += 1
+    fn capture_delimiter(&mut self, c: char) -> bool {
+        if self.schema_mgr.has_delimiter(c) {
+            self.last_delimiter = Some(c);
+            return true;
+        }
+        false
+    }
+
+    fn simulate_var_dfa_and_set_lexer_state(&mut self, c: char, delimiter_dst_state: LexerState) {
+        if false == c.is_ascii() {
+            self.state = LexerState::SeekingToTheNextDelimiter;
+            return;
+        }
+        match self.var_dfa.get_next_state(self.dfa_state.clone(), c as u8) {
+            Some(next_dfa_state) => {
+                self.dfa_state = next_dfa_state;
+                match self.var_dfa.is_accept_state(self.dfa_state.clone()) {
+                    Some(_) => self.state = LexerState::DFAAccepted,
+                    None => self.state = LexerState::DFANotAccepted,
+                }
+            }
+            None => {
+                self.state = if self.capture_delimiter(c) {
+                    delimiter_dst_state
+                } else {
+                    LexerState::SeekingToTheNextDelimiter
+                };
+            }
+        }
+    }
+
+    fn proceed_to_var_dfa_simulation(&mut self) {
+        self.match_start_pos = self.buf_cursor_pos;
+        self.dfa_state = self.var_dfa.get_root();
+        self.state = LexerState::DFANotAccepted;
+    }
+
+    fn generate_token(&mut self, end_pos: usize, token_type: TokenType) -> Result<()> {
+        if end_pos <= self.last_tokenized_pos {
+            return Err(LexerInternalErr("Tokenization end position corrupted"));
+        }
+        self.token_queue.push_back(Token {
+            val: self.buf[self.last_tokenized_pos..end_pos].iter().collect(),
+            line_num: self.line_num,
+            token_type,
+        });
+        self.last_tokenized_pos = end_pos;
+        Ok(())
+    }
+
+    fn get_and_increment_buf_cursor_pos(&mut self) -> usize {
+        let curr_pos = self.buf_cursor_pos;
+        self.buf_cursor_pos += 1;
+        curr_pos
+    }
+
+    fn set_buf_cursor_pos(&mut self, pos: usize) {
+        self.buf_cursor_pos = pos;
     }
 
     fn buffer_garbage_collection(&mut self) {
