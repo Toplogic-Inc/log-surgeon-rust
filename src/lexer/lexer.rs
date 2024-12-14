@@ -3,7 +3,7 @@ use crate::error_handling::Error::{LexerInputStreamNotSet, LexerInternalErr, Lex
 use crate::error_handling::Result;
 use crate::lexer::LexerStream;
 use crate::nfa::nfa::NFA;
-use crate::parser::ParsedSchema;
+use crate::parser::SchemaConfig;
 use std::collections::VecDeque;
 use std::ffi::c_int;
 use std::rc::Rc;
@@ -19,7 +19,7 @@ enum LexerState {
 }
 
 pub struct Lexer<'a> {
-    schema_mgr: &'a ParsedSchema,
+    schema_config: &'a SchemaConfig,
     ts_dfa: DFA,
     var_dfa: DFA,
 
@@ -57,7 +57,7 @@ pub struct Token {
 impl<'a> Lexer<'a> {
     const MIN_BUF_GARBAGE_COLLECTION_SIZE: usize = 4096;
 
-    pub fn new(schema_mgr: &'a ParsedSchema) -> Result<Self> {
+    pub fn new(schema_mgr: &'a SchemaConfig) -> Result<Self> {
         let mut ts_nfas: Vec<NFA> = Vec::new();
         for schema in schema_mgr.get_ts_schemas() {
             let mut nfa = NFA::new();
@@ -76,7 +76,7 @@ impl<'a> Lexer<'a> {
         let var_dfa_root = var_dfa.get_root();
 
         Ok(Self {
-            schema_mgr,
+            schema_config: schema_mgr,
             ts_dfa,
             var_dfa,
             state: LexerState::ParsingTimestamp,
@@ -127,7 +127,7 @@ impl<'a> Lexer<'a> {
             match self.state {
                 LexerState::SeekingToTheNextDelimiter => match self.get_next_char_from_buffer()? {
                     Some(c) => {
-                        if self.schema_mgr.has_delimiter(c) {
+                        if self.schema_config.has_delimiter(c) {
                             self.last_delimiter = Some(c);
                             self.state = LexerState::HandleDelimiter;
                         }
@@ -308,7 +308,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn capture_delimiter(&mut self, c: char) -> bool {
-        if self.schema_mgr.has_delimiter(c) {
+        if self.schema_config.has_delimiter(c) {
             self.last_delimiter = Some(c);
             return true;
         }

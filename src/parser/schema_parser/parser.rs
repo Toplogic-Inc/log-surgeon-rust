@@ -55,13 +55,13 @@ impl VarSchema {
     }
 }
 
-pub struct ParsedSchema {
+pub struct SchemaConfig {
     ts_schemas: Vec<TimestampSchema>,
     var_schemas: Vec<VarSchema>,
     delimiters: [bool; 128],
 }
 
-impl ParsedSchema {
+impl SchemaConfig {
     pub fn get_ts_schemas(&self) -> &Vec<TimestampSchema> {
         &self.ts_schemas
     }
@@ -78,19 +78,19 @@ impl ParsedSchema {
     }
 }
 
-impl ParsedSchema {
+impl SchemaConfig {
     const TIMESTAMP_KEY: &'static str = "timestamp";
     const VAR_KEY: &'static str = "variables";
     const DELIMITER_EKY: &'static str = "delimiters";
 
-    pub fn parse_from_str(yaml_content: &str) -> Result<ParsedSchema> {
+    pub fn parse_from_str(yaml_content: &str) -> Result<SchemaConfig> {
         match Self::load_kv_pairs_from_yaml_content(yaml_content) {
             Ok(kv_pairs) => Self::load_from_kv_pairs(kv_pairs),
             Err(e) => Err(YamlParsingError(e)),
         }
     }
 
-    pub fn parse_from_file(yaml_file_path: &str) -> Result<ParsedSchema> {
+    pub fn parse_from_file(yaml_file_path: &str) -> Result<SchemaConfig> {
         match std::fs::File::open(yaml_file_path) {
             Ok(mut file) => {
                 let mut contents = String::new();
@@ -183,7 +183,7 @@ mod tests {
         let schema_path = std::path::Path::new(project_root)
             .join("examples")
             .join("schema.yaml");
-        let parsed_schema = ParsedSchema::parse_from_file(schema_path.to_str().unwrap())?;
+        let parsed_schema = SchemaConfig::parse_from_file(schema_path.to_str().unwrap())?;
 
         assert_eq!(parsed_schema.get_ts_schemas().len(), 3);
         assert_eq!(parsed_schema.get_var_schemas().len(), 4);
