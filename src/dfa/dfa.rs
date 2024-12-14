@@ -727,4 +727,38 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_timestamp() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+        println!("{:?}", nfa);
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa]);
+        println!("{:?}", dfa);
+
+        assert_eq!(dfa.simulate("2015-01-31T15:50:45.39"), (Some(0usize), true));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_static_text() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"TIMESTAMP")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+        println!("{:?}", nfa);
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa]);
+        println!("{:?}", dfa);
+
+        assert_eq!(dfa.simulate("TIMESTAMP"), (Some(0usize), true));
+
+        Ok(())
+    }
 }

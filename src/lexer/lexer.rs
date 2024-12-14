@@ -5,7 +5,7 @@ use crate::lexer::LexerStream;
 use crate::nfa::nfa::NFA;
 use crate::parser::SchemaConfig;
 use std::collections::VecDeque;
-use std::ffi::c_int;
+use std::fmt::Debug;
 use std::rc::Rc;
 
 enum LexerState {
@@ -18,8 +18,8 @@ enum LexerState {
     EndOfStream,
 }
 
-pub struct Lexer<'a> {
-    schema_config: &'a SchemaConfig,
+pub struct Lexer {
+    schema_config: Rc<SchemaConfig>,
     ts_dfa: DFA,
     var_dfa: DFA,
 
@@ -38,8 +38,8 @@ pub struct Lexer<'a> {
     line_num: usize,
 }
 
-#[derive(Debug)]
-enum TokenType {
+#[derive(Clone, Debug)]
+pub enum TokenType {
     Timestamp(usize),
     Variable(usize),
     StaticText,
@@ -47,17 +47,36 @@ enum TokenType {
     End,
 }
 
-#[derive(Debug)]
 pub struct Token {
-    pub val: String,
-    pub token_type: TokenType,
-    pub line_num: usize,
+    val: String,
+    token_type: TokenType,
+    line_num: usize,
 }
 
-impl<'a> Lexer<'a> {
+impl Debug for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "[{:?}|{}]: \"{}\"", self.token_type, self.line_num, self.val.escape_default())
+    }
+}
+
+impl Token {
+    pub fn get_val(&self) -> &str {
+        self.val.as_str()
+    }
+
+    pub fn get_token_type(&self) -> TokenType {
+        self.token_type.clone()
+    }
+
+    pub fn get_line_num(&self) -> usize {
+        self.line_num
+    }
+}
+
+impl Lexer {
     const MIN_BUF_GARBAGE_COLLECTION_SIZE: usize = 4096;
 
-    pub fn new(schema_mgr: &'a SchemaConfig) -> Result<Self> {
+    pub fn new(schema_mgr: Rc<SchemaConfig>) -> Result<Self> {
         let mut ts_nfas: Vec<NFA> = Vec::new();
         for schema in schema_mgr.get_ts_schemas() {
             let mut nfa = NFA::new();
@@ -270,7 +289,7 @@ impl<'a> Lexer<'a> {
             }
             curr_dfa_state = optional_next_state.unwrap();
 
-            match self.ts_dfa.is_accept_state(self.dfa_state.clone()) {
+            match self.ts_dfa.is_accept_state(curr_dfa_state.clone()) {
                 Some(ts_schema_id) => last_matched = Some((ts_schema_id, self.buf_cursor_pos)),
                 None => {}
             }

@@ -1,6 +1,5 @@
 timestamp:
-  # E.g. 2015-01-31T15:50:45.392
-  - '\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}'
+  - 'TIMESTAMP'
 
 delimiters: " \t\r\n:,!;%"
 

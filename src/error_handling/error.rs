@@ -16,6 +16,7 @@ pub enum Error {
     LexerInputStreamNotSet,
     LexerStateUnknown,
     LexerInternalErr(&'static str),
+    LogParserInternalErr(&'static str),
     InvalidSchema,
 }
 

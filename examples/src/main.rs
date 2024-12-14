@@ -1,7 +1,9 @@
 use log_surgeon::error_handling::Result;
-use log_surgeon::lexer::BufferedFileStream;
-use log_surgeon::lexer::Lexer;
 use log_surgeon::parser::SchemaConfig;
+use log_surgeon::log_parser::LogEvent;
+use log_surgeon::log_parser::LogParser;
+
+use std::rc::Rc;
 
 fn main() -> Result<()> {
     let project_root = env!("CARGO_MANIFEST_DIR");
@@ -10,19 +12,12 @@ fn main() -> Result<()> {
         .join("logs")
         .join("simple.log");
 
-    let parsed_schema = SchemaConfig::parse_from_file(schema_path.to_str().unwrap())?;
-    let mut lexer = Lexer::new(&parsed_schema)?;
-    let buffered_file_stream = Box::new(BufferedFileStream::new(log_path.to_str().unwrap())?);
-    lexer.set_input_stream(buffered_file_stream);
+    let parsed_schema = Rc::new(SchemaConfig::parse_from_file(schema_path.to_str().unwrap())?);
+    let mut log_parser = LogParser::new(parsed_schema.clone())?;
+    log_parser.set_input_file(log_path.to_str().unwrap())?;
 
-    let mut tokens = Vec::new();
-    while let Some(token) = lexer.get_next_token()? {
-        tokens.push(token);
-    }
-    assert_eq!(false, tokens.is_empty());
-
-    for token in &tokens {
-        println!("{:?}", token);
+    while let Some(log_event) = log_parser.parse_next_log_event()? {
+        println!("{:?}", log_event);
     }
 
     Ok(())
