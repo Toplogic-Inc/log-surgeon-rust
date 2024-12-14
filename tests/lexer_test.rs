@@ -3,6 +3,9 @@ use log_surgeon::lexer::BufferedFileStream;
 use log_surgeon::lexer::Lexer;
 use log_surgeon::parser::ParsedSchema;
 
+use std::fs::File;
+use std::io::{self, BufRead};
+
 #[test]
 fn test_lexer_simple() -> Result<()> {
     let project_root = env!("CARGO_MANIFEST_DIR");
@@ -25,10 +28,29 @@ fn test_lexer_simple() -> Result<()> {
     }
     assert_eq!(false, tokens.is_empty());
 
+    let mut parsed_lines = Vec::new();
+    let mut parsed_line = String::new();
+    let mut curr_line_num = 0usize;
     for token in &tokens {
-        // TODO: Add meaningful assertion when DFA bug is fixed
-        println!("{:?}", token);
+        if curr_line_num != token.line_num {
+            parsed_lines.push(parsed_line.clone());
+            parsed_line.clear();
+            curr_line_num += 1;
+        }
+        parsed_line += &token.val.to_string();
     }
+    parsed_lines.push(parsed_line.clone());
+
+    let mut expected_lines = Vec::new();
+    let reader = io::BufReader::new(File::open(log_path).expect("failed to open log file"));
+    for line in reader.lines() {
+        let line = line.expect("failed to read line");
+        expected_lines.push(line + "\n");
+    }
+
+    assert_eq!(parsed_lines.len(), expected_lines.len());
+    assert_eq!(false, parsed_line.is_empty());
+    assert_eq!(parsed_lines, expected_lines);
 
     Ok(())
 }

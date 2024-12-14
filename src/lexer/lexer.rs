@@ -49,12 +49,14 @@ enum TokenType {
 
 #[derive(Debug)]
 pub struct Token {
-    val: String,
-    token_type: TokenType,
-    line_num: usize,
+    pub val: String,
+    pub token_type: TokenType,
+    pub line_num: usize,
 }
 
 impl<'a> Lexer<'a> {
+    const MIN_BUF_GARBAGE_COLLECTION_SIZE: usize = 4096;
+
     pub fn new(schema_mgr: &'a ParsedSchema) -> Result<Self> {
         let mut ts_nfas: Vec<NFA> = Vec::new();
         for schema in schema_mgr.get_ts_schemas() {
@@ -296,11 +298,11 @@ impl<'a> Lexer<'a> {
             }
 
             if false == self.token_queue.is_empty() {
-                // TODO: Add garbage collection
                 break;
             }
         }
 
+        self.buffer_garbage_collection();
         Ok(())
     }
 
@@ -372,5 +374,25 @@ impl<'a> Lexer<'a> {
 
     fn increment_buffer_cursor_pos(&mut self) {
         self.buf_cursor_pos += 1
+    }
+
+    fn buffer_garbage_collection(&mut self) {
+        if self.last_tokenized_pos <= self.buf.len() / 2
+            || self.last_tokenized_pos <= Self::MIN_BUF_GARBAGE_COLLECTION_SIZE
+        {
+            return;
+        }
+
+        let mut dst_idx = 0usize;
+        let mut src_idx = self.last_tokenized_pos;
+        while src_idx < self.buf.len() {
+            self.buf[dst_idx] = self.buf[src_idx];
+            dst_idx += 1;
+            src_idx += 1;
+        }
+        self.buf.resize(dst_idx, 0 as char);
+        self.buf_cursor_pos -= self.last_tokenized_pos;
+        self.last_tokenized_pos = 0;
+        // No need to reset match_start/end
     }
 }
