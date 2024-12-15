@@ -3,21 +3,26 @@ Project Link: [Homepage][home-page]
 
 Video Demo Link: [Video Demo][video-demo]
 
+---
+
 ## Team Members
 - Student 1: Siwei (Louis) He, 1004220960, siwei.he@mail.utoronto.ca
-- Student 2: Zhihao Lin, 1005071299, <TO-DO: Zhihao's email>
+- Student 2: Zhihao Lin, 1005071299, zh.lin@mail.utoronto.ca
+
+---
 
 ## Introduction
 
 `log-surgeon` is a library for high-performance parsing of unstructured text
 logs implemented using Rust.
 
+---
 
 ## Motivation
 Today's large technology companies generate logs the magnitude of petabytes per day as a critical
 source for runtime failure diagnostics and data analytics. In a real-world production environment,
-logs can be split into two categories: unstructured logs and structured logs, where unstructured logs
-usually consist of a timestamp and a raw text message (i.e.,[Hadoop logs][hadoop-logs]), and
+logs can be split into two categories: unstructured logs and structured logs, where unstructured
+logs usually consist of a timestamp and a raw text message (i.e.,[Hadoop logs][hadoop-logs]), and
 structured logs are normally JSON records (i.e., [mongoDB logs][mongodb-logs]). [CLP][github-clp],
 is a distributed system designed to compress, search, and analyze large-scale log data. It provides
 solutions for both unstructured and structured logs, as discussed in its
@@ -78,6 +83,8 @@ Our project, [log-surgeon-rust][home-page], is designed to improve CLP's parsing
 safe and high-performant regular expression engine specialized for unstructured logs, allowing users
 to extract named variables from raw text log messages efficiently according to user-defined schema.
 
+---
+
 ## Objective
 The objective of this project is to fill the gap explained in the motivation above in the current
 Rust ecosystem. We shall deliver a high-performance and memory-safe log parsing library using Rust.
@@ -89,35 +96,49 @@ User-defined schemas will be described in regular expressions, and the underlyin
 the schema regular expressions into abstract syntax trees (AST), convert ASTs into non-deterministic
 finite automata ([NFA][wiki-nfa]), and merge all NFAs into one large deterministic finite automata
 ([DFA][wiki-dfa]). This single-DFA design will ensure the execution time is bounded by the length of
-the input stream. If time allows, we will even implement [tagged DFA][wiki-tagged-dfa] to make
-the schema more powerful.
+the input stream.
 
-The parser has two components:
-- The schema parser, which is an implementation of [LALR parser][wiki-lalr], parses user-input
-schema into regex AST.
-- The log parser, which operates similarly to a simple compiler, uses a lexer to process the input
-text and emits tokens, and makes decisions based on emitted tokens using the core regex engine.
+The actual log parser should operate similarly to a simple compiler: it uses a lexer to process the
+input character stream and emits tokens according to the user-defined schema, and makes decisions
+based on emitted tokens to construct parsed log events.
 
 The log parsing interface will provide user programmatic APIs to:
-- Specify inputs (variable schemas) to configure the regex engine
-- Feed input stream to the log parser using the configured regex engine
+- Specify inputs (variable schemas) to configure the log parser
+- Feed input log stream to the log parser
 - Retrieve outputs (parsed log events structured according to the user schema) from the parser
 
-## Features
-The log-surgeon library provides the following features:
-- Parsing and extracting variable values like the log event's log-level and any other user-specified variables,
-no matter where they appear in each log event.
-- Parsing by using regular expressions for each variable type rather than regular expressions for an entire log event.
-- Parsing multi-line log events (delimited by timestamps).
+---
 
-Since log-surgeon is a Rust library, there are also some features that are not available externally:
-- any string to AST conversion
-- AST to NFA conversion
-- multiple NFAs to a single DFA conversion
-- DFA simulation on the input stream
-- user schema parser
-- log parser
-If you need these features, you can reference the implementation of log-surgeon library in your Rust project.
+## Features  
+As a log parsing library, log-surgeon provides the following features that differ from general text
+parsers:
+- **Advanced Log Parsing Capabilities:**
+  - Extracts variable values such as log levels and user-defined variables, regardless of their
+    position within log events.
+  - Utilizes regular expressions tailored to each variable type rather than for entire log events.
+  - Supports parsing of multi-line log events, delimited by timestamps.
+
+- **Customizable Stream Support:**
+  - Enables integration with user-defined stream types through the `log_surgeon::lexer::LexerStream`
+    trait.
+
+- **Flexible Parsing APIs:**
+  - A **low-level API** for streaming lexer-generated tokens.
+  - A **high-level API** that structures tokens into parsed log events for easier consumption.
+
+As the library prioritizes log parsing, the regex engine is not part of the default API. To access
+regex-specific functionality, enable the `regex-engine` feature in the Cargo configuration. This
+feature provides APIs for:
+- Converting [regex_syntax::ast::Ast][regex-syntax-ast-Ast] into an NFA.
+- Merging multiple NFAs into a single DFA.
+- Simulating a DFA with character streams or strings.
+
+---
+
+## Architecture Overview
+![log-surgeon-arch-overview](docs/src/overall-arch-diagram.png)
+
+---
 
 ## User's Guide
 log-surgeon is a Rust library for high-performance parsing of unstructured text logs. It is being 
@@ -163,37 +184,48 @@ The example uses the repository relative path to include the dependency. If you 
 library in your project, you can follow the user's guide above where you should specify the git URL
 to obtain the latest version of the library.
 
+---
+
 ## Contributions by each team member
 1. **[Louis][github-siwei]**
-- Implemented the draft version of the AST to NFA conversion.
+- Implemented the draft version of the AST-to-NFA conversion.
 - Implemented the conversion from one or more NFAs to a single DFA.
 - Implemented the simulation of the DFA on the input stream.
 
 
 2. **[Zhihao][github-zhihao]**
--
+- Implemented the final version of AST-to-NFA conversion.
+- Implemented the schema parser.
+- Implemented the lexer.
+- Implemented the log parser.
 
-Both members on the team have contributed to the design of the project. Both will review the other's implementation
-through GitHub's Pull Request for the purpose of the correctness and efficiency.
+Both members contributed to the overall architecture, unit testing, integration testing, and library
+finalization. Both members reviewed the other's implementation through GitHub's Pull Request.
+
+---
 
 ## Lessons learned and concluding remarks
-This project is a great opportunity for us to learn about the Rust programming language. There is an existing
-C++ implementation of the log parsing library, and we have learned how to port the existing code to Rust. The Rust
-programming language has a very different coding mindset compared to C++. It is a memory-safe language that has
-a very strict borrowing system. We have learned how to use Rust's borrowing system to ensure the safety of our code.
+This project provided us with an excellent opportunity to learn about the Rust programming language.
+We gained hands-on experience with Rust's borrowing system, which helped us write safe and reliable
+code.
 
-Alongside the successful completion of the project, we also noticed a few places where we could potentially do better.
-First, we could have spent more time on the research and the design part of the project. We spent significant time on
-iterating how the AST to NFA conversion should be implemented. A consensus on the design could have saved us time in
-the implementation phase.
+While we successfully completed the project, we identified areas for improvement. First, we could
+have invested more time in the research and design phase. A clearer consensus on the AST-to-NFA
+conversion design could have reduced the time spent on iterations during implementation.
 
-Second, given the time constraint, we did not have time to optimize the performance of the library. We have implemented
-the core functionality of the library, but we have not done enough for the performance optimization. We might have chosen
-a project that is too ambitious for the very limited time frame.
+Second, due to time constraints, we couldn’t fully optimize the library’s performance. While the
+core functionality is implemented, there’s significant room for improvement. We have many ideas for
+optimization but lacked the time to execute them.
 
-Overall, the project is a great learning experience. We have learned a lot about Rust, how to ship a Rust crate,
-and how everything works behind the Regex processing. We are proud filling the gap in the Rust ecosystem where
-there is no high-performance unstructured log parsing library.
+Overall, the project is a great learning experience. We have learned a lot about Rust, how to ship a
+Rust crate, and how everything works behind the regular expression processing. We are proud filling
+the gap in the Rust ecosystem where there is no high-performance unstructured log parsing library.
+
+The future work:
+- Improve DFA simulation performance.
+- Implement [tagged-DFA][wiki-tagged-dfa] to support more powerful variable extraction.
+- Optimize the lexer to emit tokens based on buffer views, reducing internal string copying.
+
 
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
 [clp-s-paper]: https://www.usenix.org/system/files/osdi24-wang-rui.pdf
@@ -203,8 +235,8 @@ there is no high-performance unstructured log parsing library.
 [hadoop-logs]: https://zenodo.org/records/7114847
 [home-page]: https://github.com/Toplogic-Inc/log-surgeon-rust
 [mongodb-logs]: https://zenodo.org/records/11075361
+[regex-syntax-ast-Ast]: https://docs.rs/regex-syntax/latest/regex_syntax/ast/enum.Ast.html
 [wiki-dfa]: https://en.wikipedia.org/wiki/Deterministic_finite_automaton
-[wiki-lalr]: https://en.wikipedia.org/wiki/LALR_parser
 [wiki-nfa]: https://en.wikipedia.org/wiki/Nondeterministic_finite_automaton
 [wiki-tagged-dfa]: https://en.wikipedia.org/wiki/Tagged_Deterministic_Finite_Automaton
-[video-demo]: todo
+[video-demo]: TODO
