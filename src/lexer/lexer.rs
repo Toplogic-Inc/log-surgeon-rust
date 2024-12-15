@@ -55,7 +55,13 @@ pub struct Token {
 
 impl Debug for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "[{:?}|{}]: \"{}\"", self.token_type, self.line_num, self.val.escape_default())
+        write!(
+            f,
+            "[{:?}|{}]: \"{}\"",
+            self.token_type,
+            self.line_num,
+            self.val.escape_default()
+        )
     }
 }
 

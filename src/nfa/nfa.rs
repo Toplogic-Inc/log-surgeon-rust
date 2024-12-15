@@ -224,10 +224,11 @@ impl NFA {
 
         let (min, optional_max) = Self::get_repetition_range(&repetition.op.kind);
         let mut start_state = start.clone();
+        let range_bound_state = self.new_state();
 
         if 0 == min {
             // 0 repetitions at minimum, meaning that there's an epsilon transition start -> end
-            self.add_epsilon_transition(start_state.clone(), end.clone());
+            self.add_epsilon_transition(start_state.clone(), range_bound_state.clone());
         } else {
             for _ in 1..min {
                 let intermediate_state = self.new_state();
@@ -238,17 +239,28 @@ impl NFA {
                 )?;
                 start_state = intermediate_state;
             }
-            self.add_ast_to_nfa(&repetition.ast, start_state.clone(), end.clone())?;
+            self.add_ast_to_nfa(
+                &repetition.ast,
+                start_state.clone(),
+                range_bound_state.clone(),
+            )?;
         }
 
         match optional_max {
-            None => self.add_ast_to_nfa(&repetition.ast, end.clone(), end.clone())?,
+            None => {
+                self.add_ast_to_nfa(
+                    &repetition.ast,
+                    range_bound_state.clone(),
+                    range_bound_state.clone(),
+                )?;
+                self.add_epsilon_transition(range_bound_state.clone(), end.clone());
+            }
             Some(max) => {
                 if min == max {
                     // Already handled in the section above
                     return Ok(());
                 }
-                start_state = end.clone();
+                start_state = range_bound_state.clone();
                 for _ in min..max {
                     let intermediate_state = self.new_state();
                     self.add_ast_to_nfa(
