@@ -26,17 +26,17 @@ impl LogParser {
         Ok((Self {
             lexer,
             schema_config,
-            tokens: Some(Vec::new()),
+            tokens: None,
         }))
     }
 
     pub fn set_input_file(&mut self, path: &str) -> Result<()> {
-        self.tokens = Some(Vec::new());
         let buffered_file_stream = Box::new(BufferedFileStream::new(path)?);
         self.set_input_stream(buffered_file_stream)
     }
 
     pub fn set_input_stream(&mut self, input_stream: Box<dyn LexerStream>) -> Result<()> {
+        self.tokens = None;
         self.lexer.set_input_stream(input_stream);
         Ok(())
     }
@@ -119,6 +119,14 @@ impl LogEvent {
             true => &self.tokens[1..],
             false => &self.tokens[..],
         }
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut result = String::new();
+        for token in &self.tokens {
+            result += &token.get_val();
+        }
+        result
     }
 }
 

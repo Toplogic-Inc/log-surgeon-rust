@@ -5,23 +5,20 @@ use log_surgeon::parser::SchemaConfig;
 
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::rc::Rc;
 
 #[test]
 fn test_lexer_simple() -> Result<()> {
     let project_root = env!("CARGO_MANIFEST_DIR");
     let schema_path = std::path::Path::new(project_root)
         .join("examples")
-        .join("schema_simple.yaml");
+        .join("schema.yaml");
     let log_path = std::path::Path::new(project_root)
         .join("examples")
         .join("logs")
-        .join("simple.log");
+        .join("hive-24h.log");
 
-    let parsed_schema = Rc::new(SchemaConfig::parse_from_file(
-        schema_path.to_str().unwrap(),
-    )?);
-    let mut lexer = Lexer::new(parsed_schema)?;
+    let schema_config = SchemaConfig::parse_from_file(schema_path.to_str().unwrap())?;
+    let mut lexer = Lexer::new(schema_config)?;
     let buffered_file_stream = Box::new(BufferedFileStream::new(log_path.to_str().unwrap())?);
     lexer.set_input_stream(buffered_file_stream);
 
@@ -33,7 +30,7 @@ fn test_lexer_simple() -> Result<()> {
 
     let mut parsed_lines = Vec::new();
     let mut parsed_line = String::new();
-    let mut curr_line_num = 0usize;
+    let mut curr_line_num = 1usize;
     for token in &tokens {
         if curr_line_num != token.get_line_num() {
             parsed_lines.push(parsed_line.clone());

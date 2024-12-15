@@ -762,6 +762,11 @@ mod tests {
         assert_eq!(dfa.simulate("1234"), (Some(0usize), true));
         assert_eq!(dfa.simulate("0x1A2B3C4D5E6F7890"), (Some(0usize), true));
         assert_eq!(dfa.simulate("0x1a2b3c4d5e6f7890"), (Some(0usize), true));
+        assert_eq!(
+            dfa.simulate("0xddba9b95eeb3cfb9ccb3d8401d1610d42f0e3aad"),
+            (Some(0usize), true)
+        );
+
         assert_eq!(dfa.simulate("1a2b3c4d5e6f7890"), (Some(0usize), true));
         assert_eq!(dfa.simulate("abcdef"), (Some(0usize), true));
         assert_eq!(dfa.simulate("abcdefg"), (None, false));
