@@ -807,4 +807,169 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_repetition() -> Result<()> {
+        {
+            let mut parser = RegexParser::new();
+            let parsed_ast = parser.parse_into_ast(r"a{0,3}")?;
+
+            let mut nfa = NFA::new();
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+            println!("{:?}", nfa);
+
+            let dfa = DFA::from_multiple_nfas(vec![nfa]);
+            println!("{:?}", dfa);
+
+            assert_eq!(dfa.simulate(""), (Some(0usize), true));
+            assert_eq!(dfa.simulate("a"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaa"), (None, false));
+        }
+
+        {
+            let mut parser = RegexParser::new();
+            let parsed_ast = parser.parse_into_ast(r"a{0,1}")?;
+
+            let mut nfa = NFA::new();
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+            println!("{:?}", nfa);
+
+            let dfa = DFA::from_multiple_nfas(vec![nfa]);
+            println!("{:?}", dfa);
+
+            assert_eq!(dfa.simulate(""), (Some(0usize), true));
+            assert_eq!(dfa.simulate("a"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aa"), (None, false));
+        }
+
+        {
+            let mut parser = RegexParser::new();
+            let parsed_ast = parser.parse_into_ast(r"a*")?;
+
+            let mut nfa = NFA::new();
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+            println!("{:?}", nfa);
+
+            let dfa = DFA::from_multiple_nfas(vec![nfa]);
+            println!("{:?}", dfa);
+
+            assert_eq!(dfa.simulate(""), (Some(0usize), true));
+            assert_eq!(dfa.simulate("a"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaaaaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("ab"), (None, false));
+            assert_eq!(dfa.simulate("ba"), (None, false));
+        }
+
+        {
+            let mut parser = RegexParser::new();
+            let parsed_ast = parser.parse_into_ast(r"a+")?;
+
+            let mut nfa = NFA::new();
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+            println!("{:?}", nfa);
+
+            let dfa = DFA::from_multiple_nfas(vec![nfa]);
+            println!("{:?}", dfa);
+
+            assert_eq!(dfa.simulate(""), (None, false));
+            assert_eq!(dfa.simulate("a"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaaaaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("ab"), (None, false));
+            assert_eq!(dfa.simulate("ba"), (None, false));
+        }
+
+        {
+            let mut parser = RegexParser::new();
+            let parsed_ast = parser.parse_into_ast(r"a{1,}")?;
+
+            let mut nfa = NFA::new();
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+            println!("{:?}", nfa);
+
+            let dfa = DFA::from_multiple_nfas(vec![nfa]);
+            println!("{:?}", dfa);
+
+            assert_eq!(dfa.simulate(""), (None, false));
+            assert_eq!(dfa.simulate("a"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaaaaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("ab"), (None, false));
+            assert_eq!(dfa.simulate("ba"), (None, false));
+        }
+
+        {
+            let mut parser = RegexParser::new();
+            let parsed_ast = parser.parse_into_ast(r"a{3,}")?;
+
+            let mut nfa = NFA::new();
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+            println!("{:?}", nfa);
+
+            let dfa = DFA::from_multiple_nfas(vec![nfa]);
+            println!("{:?}", dfa);
+
+            assert_eq!(dfa.simulate(""), (None, false));
+            assert_eq!(dfa.simulate("a"), (None, false));
+            assert_eq!(dfa.simulate("aa"), (None, false));
+            assert_eq!(dfa.simulate("aaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaaaaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("ab"), (None, false));
+            assert_eq!(dfa.simulate("ba"), (None, false));
+        }
+
+        {
+            let mut parser = RegexParser::new();
+            let parsed_ast = parser.parse_into_ast(r"a{3}")?;
+
+            let mut nfa = NFA::new();
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+            println!("{:?}", nfa);
+
+            let dfa = DFA::from_multiple_nfas(vec![nfa]);
+            println!("{:?}", dfa);
+
+            assert_eq!(dfa.simulate(""), (None, false));
+            assert_eq!(dfa.simulate("a"), (None, false));
+            assert_eq!(dfa.simulate("aa"), (None, false));
+            assert_eq!(dfa.simulate("aaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaa"), (None, false));
+            assert_eq!(dfa.simulate("aaaaaaaa"), (None, false));
+            assert_eq!(dfa.simulate("ab"), (None, false));
+            assert_eq!(dfa.simulate("ba"), (None, false));
+        }
+
+        {
+            let mut parser = RegexParser::new();
+            let parsed_ast = parser.parse_into_ast(r"a{3,6}")?;
+
+            let mut nfa = NFA::new();
+            nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+            println!("{:?}", nfa);
+
+            let dfa = DFA::from_multiple_nfas(vec![nfa]);
+            println!("{:?}", dfa);
+
+            assert_eq!(dfa.simulate(""), (None, false));
+            assert_eq!(dfa.simulate("a"), (None, false));
+            assert_eq!(dfa.simulate("aa"), (None, false));
+            assert_eq!(dfa.simulate("aaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaaaa"), (Some(0usize), true));
+            assert_eq!(dfa.simulate("aaaaaaa"), (None, false));
+            assert_eq!(dfa.simulate("aaaaaaaa"), (None, false));
+            assert_eq!(dfa.simulate("ab"), (None, false));
+            assert_eq!(dfa.simulate("ba"), (None, false));
+        }
+
+        Ok(())
+    }
 }

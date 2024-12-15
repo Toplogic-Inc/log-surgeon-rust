@@ -246,6 +246,7 @@ impl NFA {
             )?;
         }
 
+        self.add_epsilon_transition(range_bound_state.clone(), end.clone());
         match optional_max {
             None => {
                 self.add_ast_to_nfa(
@@ -253,7 +254,6 @@ impl NFA {
                     range_bound_state.clone(),
                     range_bound_state.clone(),
                 )?;
-                self.add_epsilon_transition(range_bound_state.clone(), end.clone());
             }
             Some(max) => {
                 if min == max {
@@ -695,6 +695,7 @@ mod tests {
     #[test]
     fn test_repetition() -> Result<()> {
         let a_transition = Transition::convert_char_to_symbol_onehot_encoding('a');
+        let range_bound_state = State(2);
 
         {
             let mut parser = RegexParser::new();
@@ -706,22 +707,15 @@ mod tests {
             assert!(has_transition(
                 &nfa,
                 NFA::START_STATE,
-                NFA::ACCEPT_STATE,
+                range_bound_state.clone(),
                 EPSILON_TRANSITION
             ));
             assert!(has_transition(
                 &nfa,
-                NFA::ACCEPT_STATE,
-                State(2),
+                range_bound_state.clone(),
+                State(3),
                 a_transition
             ));
-            assert!(has_transition(
-                &nfa,
-                State(2),
-                NFA::ACCEPT_STATE,
-                EPSILON_TRANSITION
-            ));
-            assert!(has_transition(&nfa, State(2), State(3), a_transition));
             assert!(has_transition(
                 &nfa,
                 State(3),
@@ -735,8 +729,21 @@ mod tests {
                 NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
+            assert!(has_transition(&nfa, State(4), State(5), a_transition));
+            assert!(has_transition(
+                &nfa,
+                State(5),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
+            assert!(has_transition(
+                &nfa,
+                range_bound_state.clone(),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
 
-            assert_eq!(nfa.states.len(), 5);
+            assert_eq!(nfa.states.len(), 6);
         }
 
         {
@@ -749,23 +756,29 @@ mod tests {
             assert!(has_transition(
                 &nfa,
                 NFA::START_STATE,
-                NFA::ACCEPT_STATE,
+                range_bound_state.clone(),
                 EPSILON_TRANSITION
             ));
             assert!(has_transition(
                 &nfa,
-                NFA::ACCEPT_STATE,
-                State(2),
+                range_bound_state.clone(),
+                State(3),
                 a_transition
             ));
             assert!(has_transition(
                 &nfa,
-                State(2),
+                State(3),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
+            assert!(has_transition(
+                &nfa,
+                range_bound_state.clone(),
                 NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
 
-            assert_eq!(nfa.states.len(), 3);
+            assert_eq!(nfa.states.len(), 4);
         }
 
         {
@@ -778,17 +791,23 @@ mod tests {
             assert!(has_transition(
                 &nfa,
                 NFA::START_STATE,
-                NFA::ACCEPT_STATE,
+                range_bound_state.clone(),
                 EPSILON_TRANSITION
             ));
             assert!(has_transition(
                 &nfa,
-                NFA::ACCEPT_STATE,
-                State(1),
+                range_bound_state.clone(),
+                range_bound_state.clone(),
                 a_transition
             ));
+            assert!(has_transition(
+                &nfa,
+                range_bound_state.clone(),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
 
-            assert_eq!(nfa.states.len(), 2);
+            assert_eq!(nfa.states.len(), 3);
         }
 
         {
@@ -807,17 +826,29 @@ mod tests {
             assert!(has_transition(
                 &nfa,
                 NFA::START_STATE,
-                NFA::ACCEPT_STATE,
+                range_bound_state.clone(),
                 a_transition
             ));
             assert!(has_transition(
                 &nfa,
-                NFA::ACCEPT_STATE,
-                State(1),
+                range_bound_state.clone(),
+                range_bound_state.clone(),
                 a_transition
             ));
+            assert!(has_transition(
+                &nfa,
+                range_bound_state.clone(),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
+            assert!(has_transition(
+                &nfa,
+                range_bound_state.clone(),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
 
-            assert_eq!(nfa.states.len(), 2);
+            assert_eq!(nfa.states.len(), 3);
         }
 
         {
@@ -836,17 +867,23 @@ mod tests {
             assert!(has_transition(
                 &nfa,
                 NFA::START_STATE,
-                NFA::ACCEPT_STATE,
+                range_bound_state.clone(),
                 a_transition
             ));
             assert!(has_transition(
                 &nfa,
-                NFA::ACCEPT_STATE,
-                State(1),
+                range_bound_state.clone(),
+                range_bound_state.clone(),
                 a_transition
             ));
+            assert!(has_transition(
+                &nfa,
+                range_bound_state.clone(),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
 
-            assert_eq!(nfa.states.len(), 2);
+            assert_eq!(nfa.states.len(), 3);
         }
 
         {
@@ -856,39 +893,39 @@ mod tests {
             let mut nfa = NFA::new();
             nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
+            assert!(has_no_transition(
+                &nfa,
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
             assert!(has_transition(
                 &nfa,
                 NFA::START_STATE,
-                State(2),
+                State(3),
                 a_transition
             ));
-            assert!(has_no_transition(
-                &nfa,
-                State(2),
-                NFA::ACCEPT_STATE,
-                EPSILON_TRANSITION
-            ));
-            assert!(has_transition(&nfa, State(2), State(3), a_transition));
-            assert!(has_no_transition(
-                &nfa,
-                State(3),
-                NFA::ACCEPT_STATE,
-                EPSILON_TRANSITION
-            ));
+            assert!(has_transition(&nfa, State(3), State(4), a_transition));
             assert!(has_transition(
                 &nfa,
-                State(3),
-                NFA::ACCEPT_STATE,
+                State(4),
+                range_bound_state.clone(),
                 a_transition
             ));
             assert!(has_transition(
                 &nfa,
-                NFA::ACCEPT_STATE,
-                State(1),
+                range_bound_state.clone(),
+                range_bound_state.clone(),
                 a_transition
+            ));
+            assert!(has_transition(
+                &nfa,
+                range_bound_state.clone(),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
             ));
 
-            assert_eq!(nfa.states.len(), 4);
+            assert_eq!(nfa.states.len(), 5);
         }
 
         {
@@ -898,39 +935,33 @@ mod tests {
             let mut nfa = NFA::new();
             nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
+            assert!(has_no_transition(
+                &nfa,
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
             assert!(has_transition(
                 &nfa,
                 NFA::START_STATE,
-                State(2),
+                State(3),
                 a_transition
             ));
-            assert!(has_no_transition(
+            assert!(has_transition(&nfa, State(3), State(4), a_transition));
+            assert!(has_transition(
                 &nfa,
-                State(2),
-                NFA::ACCEPT_STATE,
-                EPSILON_TRANSITION
-            ));
-            assert!(has_transition(&nfa, State(2), State(3), a_transition));
-            assert!(has_no_transition(
-                &nfa,
-                State(3),
-                NFA::ACCEPT_STATE,
-                EPSILON_TRANSITION
+                State(4),
+                range_bound_state.clone(),
+                a_transition
             ));
             assert!(has_transition(
                 &nfa,
-                State(3),
+                range_bound_state.clone(),
                 NFA::ACCEPT_STATE,
-                a_transition
-            ));
-            assert!(has_no_transition(
-                &nfa,
-                NFA::ACCEPT_STATE,
-                State(1),
-                a_transition
+                EPSILON_TRANSITION
             ));
 
-            assert_eq!(nfa.states.len(), 4);
+            assert_eq!(nfa.states.len(), 5);
         }
 
         {
@@ -940,45 +971,37 @@ mod tests {
             let mut nfa = NFA::new();
             nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
 
+            assert!(has_no_transition(
+                &nfa,
+                NFA::START_STATE,
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
             assert!(has_transition(
                 &nfa,
                 NFA::START_STATE,
-                State(2),
-                a_transition
-            ));
-            assert!(has_no_transition(
-                &nfa,
-                State(2),
-                NFA::ACCEPT_STATE,
-                EPSILON_TRANSITION
-            ));
-            assert!(has_transition(&nfa, State(2), State(3), a_transition));
-            assert!(has_no_transition(
-                &nfa,
                 State(3),
-                NFA::ACCEPT_STATE,
-                EPSILON_TRANSITION
-            ));
-            assert!(has_transition(
-                &nfa,
-                State(3),
-                NFA::ACCEPT_STATE,
                 a_transition
             ));
-
-            assert!(has_transition(
-                &nfa,
-                NFA::ACCEPT_STATE,
-                State(4),
-                a_transition
-            ));
+            assert!(has_transition(&nfa, State(3), State(4), a_transition));
             assert!(has_transition(
                 &nfa,
                 State(4),
+                range_bound_state.clone(),
+                a_transition
+            ));
+            assert!(has_transition(
+                &nfa,
+                range_bound_state.clone(),
                 NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
-            assert!(has_transition(&nfa, State(4), State(5), a_transition));
+            assert!(has_transition(
+                &nfa,
+                range_bound_state.clone(),
+                State(5),
+                a_transition
+            ));
             assert!(has_transition(
                 &nfa,
                 State(5),
@@ -986,14 +1009,21 @@ mod tests {
                 EPSILON_TRANSITION
             ));
             assert!(has_transition(&nfa, State(5), State(6), a_transition));
+            assert!(has_transition(&nfa, State(6), State(7), a_transition));
             assert!(has_transition(
                 &nfa,
-                State(6),
+                State(7),
+                NFA::ACCEPT_STATE,
+                EPSILON_TRANSITION
+            ));
+            assert!(has_transition(
+                &nfa,
+                range_bound_state.clone(),
                 NFA::ACCEPT_STATE,
                 EPSILON_TRANSITION
             ));
 
-            assert_eq!(nfa.states.len(), 7);
+            assert_eq!(nfa.states.len(), 8);
         }
 
         Ok(())
@@ -1006,62 +1036,45 @@ mod tests {
 
         let mut nfa = NFA::new();
         nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+        println!("{:?}", nfa);
 
         assert!(has_transition(
             &nfa,
             NFA::START_STATE,
+            State(3),
+            EPSILON_TRANSITION
+        ));
+        assert!(has_transition(&nfa, State(3), State(4), SPACE_TRANSITION));
+        assert!(has_transition(&nfa, State(4), State(2), EPSILON_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            NFA::START_STATE,
+            State(5),
+            EPSILON_TRANSITION
+        ));
+        assert!(has_transition(&nfa, State(5), State(6), DIGIT_TRANSITION));
+        assert!(has_transition(&nfa, State(6), State(2), EPSILON_TRANSITION));
+
+        assert!(has_transition(&nfa, State(2), State(7), EPSILON_TRANSITION));
+        assert!(has_transition(&nfa, State(7), State(8), SPACE_TRANSITION));
+        assert!(has_transition(&nfa, State(8), State(2), EPSILON_TRANSITION));
+        assert!(has_transition(&nfa, State(2), State(9), EPSILON_TRANSITION));
+        assert!(has_transition(&nfa, State(9), State(10), DIGIT_TRANSITION));
+        assert!(has_transition(
+            &nfa,
+            State(10),
             State(2),
             EPSILON_TRANSITION
         ));
-        assert!(has_transition(&nfa, State(2), State(3), SPACE_TRANSITION));
+
         assert!(has_transition(
             &nfa,
-            State(3),
-            NFA::ACCEPT_STATE,
-            EPSILON_TRANSITION
-        ));
-        assert!(has_transition(
-            &nfa,
-            NFA::START_STATE,
-            State(4),
-            EPSILON_TRANSITION
-        ));
-        assert!(has_transition(&nfa, State(4), State(5), DIGIT_TRANSITION));
-        assert!(has_transition(
-            &nfa,
-            State(5),
+            State(2),
             NFA::ACCEPT_STATE,
             EPSILON_TRANSITION
         ));
 
-        assert!(has_transition(
-            &nfa,
-            NFA::ACCEPT_STATE,
-            State(6),
-            EPSILON_TRANSITION
-        ));
-        assert!(has_transition(&nfa, State(6), State(7), SPACE_TRANSITION));
-        assert!(has_transition(
-            &nfa,
-            State(7),
-            NFA::ACCEPT_STATE,
-            EPSILON_TRANSITION
-        ));
-        assert!(has_transition(
-            &nfa,
-            NFA::ACCEPT_STATE,
-            State(8),
-            EPSILON_TRANSITION
-        ));
-        assert!(has_transition(&nfa, State(8), State(9), DIGIT_TRANSITION));
-        assert!(has_transition(
-            &nfa,
-            State(9),
-            NFA::ACCEPT_STATE,
-            EPSILON_TRANSITION
-        ));
-
-        assert_eq!(nfa.states.len(), 10);
+        assert_eq!(nfa.states.len(), 11);
 
         Ok(())
     }
@@ -1109,41 +1122,33 @@ mod tests {
         assert!(has_transition(
             &nfa,
             NFA::START_STATE,
-            State(2),
+            State(3),
             EPSILON_TRANSITION
         ));
         assert!(has_transition(
             &nfa,
-            State(2),
             State(3),
+            State(4),
             Transition::convert_char_to_symbol_onehot_encoding('-')
         ));
-        assert!(has_transition(&nfa, State(3), State(2), EPSILON_TRANSITION));
+        assert!(has_transition(&nfa, State(4), State(2), EPSILON_TRANSITION));
 
-        assert!(has_transition(&nfa, State(2), State(4), DIGIT_TRANSITION));
-        assert!(has_transition(&nfa, State(4), State(4), DIGIT_TRANSITION));
+        assert!(has_transition(&nfa, State(2), State(6), DIGIT_TRANSITION));
+        assert!(has_transition(&nfa, State(6), State(6), DIGIT_TRANSITION));
+
+        assert!(has_transition(&nfa, State(6), State(5), EPSILON_TRANSITION));
 
         assert!(has_transition(
             &nfa,
-            State(4),
             State(5),
+            State(7),
             Transition::convert_char_to_symbol_onehot_encoding('.')
         ));
+        assert!(has_transition(&nfa, State(7), State(8), DIGIT_TRANSITION));
+        assert!(has_transition(&nfa, State(8), State(8), DIGIT_TRANSITION));
+        assert!(has_transition(&nfa, State(8), State(1), EPSILON_TRANSITION));
 
-        assert!(has_transition(
-            &nfa,
-            State(5),
-            NFA::ACCEPT_STATE,
-            DIGIT_TRANSITION
-        ));
-        assert!(has_transition(
-            &nfa,
-            NFA::ACCEPT_STATE,
-            State(1),
-            DIGIT_TRANSITION
-        ));
-
-        assert_eq!(nfa.states.len(), 6);
+        assert_eq!(nfa.states.len(), 9);
 
         Ok(())
     }
