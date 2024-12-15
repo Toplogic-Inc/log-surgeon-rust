@@ -1,5 +1,8 @@
-mod dfa;
+pub(crate) mod dfa;
 
-pub(crate) use dfa::DfaSimulator;
-pub(crate) use dfa::State;
-pub(crate) use dfa::DFA;
+#[cfg(feature = "regex-engine")]
+pub use dfa::DfaSimulator;
+#[cfg(feature = "regex-engine")]
+pub use dfa::State;
+#[cfg(feature = "regex-engine")]
+pub use dfa::DFA;

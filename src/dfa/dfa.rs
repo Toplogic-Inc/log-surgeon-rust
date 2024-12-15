@@ -45,7 +45,7 @@ impl Debug for Transition {
     }
 }
 
-pub(crate) struct DFA {
+pub struct DFA {
     start: State,
     accept: Vec<State>,
     states: Vec<State>,
@@ -79,7 +79,7 @@ impl Debug for DFA {
     }
 }
 
-pub(crate) struct DfaSimulator {
+pub struct DfaSimulator {
     dfa: Rc<DFA>,
     current_state: State,
 }

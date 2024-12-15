@@ -24,7 +24,7 @@ const EPSILON_TRANSITION: u128 = 0x0;
 const DOT_TRANSITION: u128 = !EPSILON_TRANSITION;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) struct State(pub usize);
+pub struct State(pub usize);
 
 pub struct Transition {
     from: State,
@@ -115,7 +115,7 @@ impl Transition {
     }
 }
 
-pub(crate) struct NFA {
+pub struct NFA {
     start: State,
     accept: State,
     states: Vec<State>,
