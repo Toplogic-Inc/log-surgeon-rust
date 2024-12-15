@@ -1,11 +1,9 @@
 # log-surgeon: A performant log parsing library
 Project Link: [Homepage][home-page]
 
-Video Demo Link: [Video Demo][video-demo]
-
 ## Team Members
-- Student 1: Siwei (Louis) He, 1004220960, siwei.he@mail.utoronto.ca
-- Student 2: Zhihao Lin, 1005071299, <TO-DO: Zhihao's email>
+- Student 1: Siwei (Louis) He, 1004220960
+- Student 2: Zhihao Lin, 1005071299
 
 ## Introduction
 
@@ -78,7 +76,7 @@ Our project, [log-surgeon-rust][home-page], is designed to improve CLP's parsing
 safe and high-performant regular expression engine specialized for unstructured logs, allowing users
 to extract named variables from raw text log messages efficiently according to user-defined schema.
 
-## Objective
+## Objective and Key Features
 The objective of this project is to fill the gap explained in the motivation above in the current
 Rust ecosystem. We shall deliver a high-performance and memory-safe log parsing library using Rust.
 The project should consist of the core regex engine, the parser, and the user-oriented log parsing
@@ -103,97 +101,35 @@ The log parsing interface will provide user programmatic APIs to:
 - Feed input stream to the log parser using the configured regex engine
 - Retrieve outputs (parsed log events structured according to the user schema) from the parser
 
-## Features
-The log-surgeon library provides the following features:
-- Parsing and extracting variable values like the log event's log-level and any other user-specified variables,
-no matter where they appear in each log event.
-- Parsing by using regular expressions for each variable type rather than regular expressions for an entire log event.
-- Parsing multi-line log events (delimited by timestamps).
+[Zhihao Lin][github-zhihao] will be working on the parser implementation.
 
-Since log-surgeon is a Rust library, there are also some features that are not available externally:
-- any string to AST conversion
-- AST to NFA conversion
-- multiple NFAs to a single DFA conversion
-- DFA simulation on the input stream
-- user schema parser
-- log parser
-If you need these features, you can reference the implementation of log-surgeon library in your Rust project.
+[Siwei (Louis) He][github-siwei] will be working on the core regex engine implementation.
 
-## User's Guide
-log-surgeon is a Rust library for high-performance parsing of unstructured text logs. It is being 
-shipped as a Rust crate and can be included in your Rust project by adding the following line to
-your `Cargo.toml` file:
-```toml
-[dependencies]
-log-surgeon = { git = "https://github.com/Toplogic-Inc/log-surgeon-rust", branch = "main" }
-```
+Both will be working on the log parsing interface.
 
-Example usage of the library can be found in the examples directory of the repository. You can use
-the following code to confirm that you successfully included the library and check the version of
-the library:
-```rust
-extern crate log_surgeon;
+One will review the other's implementation through GitHub's Pull Request for the purpose of the
+correctness and efficiency.
 
-fn main() {
-    println!("You are using log-surgeon version: {}", log_surgeon::version());
-}
-```
+## Tentative Plan and Status
+1. **Louis**
 
-## Reproducibility Guide
-There are several regression tests in the `tests` directory of the repository as well as in the
-individual components of the project. You can run the tests to ensure that the library is working
-as expected. The tests include testing the AST to NFA conversion, the NFA to DFA conversion, the
-DFA simulation on the input stream, and the correct passing of unstructured logs given input file
-and log searching schema.
+| Time                  | Tentative Schedule                          | Status      |
+|-----------------------|---------------------------------------------|-------------|
+| Oct. 18th ~ Oct. 25th | Complete AST common structs for the project | Done        |
+| Oct. 25th ~ Nov. 8th  | Complete NFA structs and research           | On track    |
+| Nov. 1st ~ Nov. 8th   | Implement AST to NFA translation            | Not started |
+| Nov. 8th ~ Nov. 15th  | Implement AST to NFA translation            | Not started |
+| Nov. 15th ~ Nov. 22nd | Complete DFA structs and research           | Not started |
+| Nov. 22nd ~ Nov. 29th | Implement NFA to DFA translation            | Not started |
+| Nov. 29th ~ Dec. 6th  | Stages integration and final reporting      | Not started |
 
-To run the tests, you can use the following command:
-```shell
-cargo test
-```
+2. **Zhihao**
 
-There are also example usage of the library in the `examples` directory of the repository. You can
-run the examples to see how the library can be used or be reproduced in a real-world scenario. Assume
-you are in the root directory of the repository, you can run the following command to change your
-directory to the examples directory and run the example:
-```shell
-cd examples
-cargo run
-```
-The example uses the repository relative path to include the dependency. If you want to include the
-library in your project, you can follow the user's guide above where you should specify the git URL
-to obtain the latest version of the library.
-
-## Contributions by each team member
-1. **[Louis][github-siwei]**
-- Implemented the draft version of the AST to NFA conversion.
-- Implemented the conversion from one or more NFAs to a single DFA.
-- Implemented the simulation of the DFA on the input stream.
-
-
-2. **[Zhihao][github-zhihao]**
--
-
-Both members on the team have contributed to the design of the project. Both will review the other's implementation
-through GitHub's Pull Request for the purpose of the correctness and efficiency.
-
-## Lessons learned and concluding remarks
-This project is a great opportunity for us to learn about the Rust programming language. There is an existing
-C++ implementation of the log parsing library, and we have learned how to port the existing code to Rust. The Rust
-programming language has a very different coding mindset compared to C++. It is a memory-safe language that has
-a very strict borrowing system. We have learned how to use Rust's borrowing system to ensure the safety of our code.
-
-Alongside the successful completion of the project, we also noticed a few places where we could potentially do better.
-First, we could have spent more time on the research and the design part of the project. We spent significant time on
-iterating how the AST to NFA conversion should be implemented. A consensus on the design could have saved us time in
-the implementation phase.
-
-Second, given the time constraint, we did not have time to optimize the performance of the library. We have implemented
-the core functionality of the library, but we have not done enough for the performance optimization. We might have chosen
-a project that is too ambitious for the very limited time frame.
-
-Overall, the project is a great learning experience. We have learned a lot about Rust, how to ship a Rust crate,
-and how everything works behind the Regex processing. We are proud filling the gap in the Rust ecosystem where
-there is no high-performance unstructured log parsing library.
+| Time                  | Tentative Schedule                                          | Status      |
+|-----------------------|-------------------------------------------------------------|-------------|
+| Nov. 1st ~ Nov. 15th  | Implement LALR parser for schema parsing and AST generation | Not started |
+| Nov. 15th ~ Nov. 29nd | Implement lexer for input stream processing                 | Not started |
+| Nov. 29nd ~ Dec. 6th  | Formalize log parsing APIs                                  | Not started |
 
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
 [clp-s-paper]: https://www.usenix.org/system/files/osdi24-wang-rui.pdf
@@ -207,4 +143,3 @@ there is no high-performance unstructured log parsing library.
 [wiki-lalr]: https://en.wikipedia.org/wiki/LALR_parser
 [wiki-nfa]: https://en.wikipedia.org/wiki/Nondeterministic_finite_automaton
 [wiki-tagged-dfa]: https://en.wikipedia.org/wiki/Tagged_Deterministic_Finite_Automaton
-[video-demo]: todo
