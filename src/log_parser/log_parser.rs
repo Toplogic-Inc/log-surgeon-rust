@@ -1,10 +1,10 @@
-use std::fmt::Debug;
 use crate::error_handling::Error::LogParserInternalErr;
 use crate::error_handling::Result;
 use crate::lexer::BufferedFileStream;
 use crate::lexer::LexerStream;
 use crate::lexer::{Lexer, Token, TokenType};
 use crate::parser::SchemaConfig;
+use std::fmt::Debug;
 use std::rc::Rc;
 
 pub struct LogParser {
