@@ -1,11 +1,9 @@
 use log_surgeon::error_handling::Result;
-use log_surgeon::lexer::BufferedFileStream;
 use log_surgeon::log_parser::LogParser;
 use log_surgeon::parser::SchemaConfig;
 
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::rc::Rc;
 
 #[test]
 fn test_lexer_simple() -> Result<()> {

@@ -5,7 +5,6 @@ use log_surgeon::parser::SchemaConfig;
 
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::rc::Rc;
 
 #[test]
 fn test_lexer_simple() -> Result<()> {
