@@ -1,10 +1,11 @@
 use crate::nfa::nfa::NFA;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::Rc;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-struct State(usize);
+pub struct State(usize);
 
 enum Tag {
     Start(usize),
@@ -18,12 +19,60 @@ struct Transition {
     tag: Option<Tag>,
 }
 
+impl Debug for Transition {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        if 0 == self.symbol_onehot_encoding {
+            return write!(
+                f,
+                "{:?} -> {:?}, symbol: {}",
+                self.from_state, self.to_state, "epsilon"
+            );
+        }
+
+        let mut char_vec: Vec<char> = Vec::new();
+        for i in 0..128u8 {
+            let mask = 1u128 << i;
+            if mask & self.symbol_onehot_encoding == mask {
+                char_vec.push(i as char);
+            }
+        }
+        write!(
+            f,
+            "{:?} -> {:?}, symbol: {:?}",
+            self.from_state, self.to_state, char_vec
+        )
+    }
+}
+
 pub(crate) struct DFA {
     start: State,
     accept: Vec<State>,
     states: Vec<State>,
     transitions: Vec<HashMap<u128, Transition>>, // from_state -> symbol -> to_state
     dfa_to_accepted_nfa_state_mapping: Vec<Option<(usize, crate::nfa::nfa::State)>>, // to determine which NFA gets matched
+}
+
+impl Debug for DFA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "NFA( start: {:?}, accept: {:?}, states: {:?}, transitions: {{\n",
+            self.start, self.accept, self.states
+        )?;
+
+        for state in &self.states {
+            let state_idx = state.0;
+            if self.transitions[state_idx].is_empty() {
+                continue;
+            }
+            write!(f, "\t{:?}:\n", state)?;
+            for (_, transition) in &self.transitions[state_idx] {
+                write!(f, "\t\t{:?}\n", transition)?;
+            }
+        }
+
+        write!(f, "}} )")
+    }
 }
 
 pub(crate) struct DfaSimulator {
@@ -167,7 +216,29 @@ impl DFA {
 }
 
 impl DFA {
-    fn from_multiple_nfas(nfas: Vec<NFA>) -> DFA {
+    pub fn get_next_state(&self, state: State, c: u8) -> Option<State> {
+        // No bound check
+        let transitions = &self.transitions[state.0];
+        let mask = 1u128 << c;
+        for (transition_symbol, transition) in transitions.iter() {
+            if mask & transition_symbol == mask {
+                return Some(transition.to_state.clone());
+            }
+        }
+        None
+    }
+
+    pub fn is_accept_state(&self, state: State) -> Option<usize> {
+        self.get_accept_nfa_state(state.0)
+    }
+
+    pub fn get_root(&self) -> State {
+        self.start.clone()
+    }
+}
+
+impl DFA {
+    pub fn from_multiple_nfas(nfas: Vec<NFA>) -> DFA {
         // All of the nodes now have a pair of identifiers,
         // 1. the NFA index within the list of NFAs
         // 2. the NFA state index within the NFA
@@ -266,7 +337,6 @@ impl DFA {
                 if !l_nfa_states_to_dfa_mapping.contains_key(&destination_nfa_states) {
                     // We need to add a new state to the DFA
                     let destination_dfa_state_idx = dfa_states.len();
-                    println!("Inserting State {}", destination_dfa_state_idx);
 
                     dfa_states.push(State(destination_dfa_state_idx));
                     dfa_transitions.push(HashMap::new());
@@ -306,21 +376,21 @@ impl DFA {
 }
 
 impl DfaSimulator {
-    fn new(dfa: Rc<DFA>) -> Self {
+    pub fn new(dfa: Rc<DFA>) -> Self {
         DfaSimulator {
             dfa: dfa.clone(),
             current_state: dfa.start.clone(),
         }
     }
 
-    fn reset_simulation(&mut self) {
+    pub fn reset_simulation(&mut self) {
         self.current_state = self.dfa.start.clone();
     }
 
     // Simulate the DFA with a single character
     // Returns the next state and whether the current state is a valid state
     // invalid state means that the DFA has reached a dead end
-    fn simulate_single_char(&mut self, input: char) -> (Option<usize>, bool) {
+    pub fn simulate_single_char(&mut self, input: char) -> (Option<usize>, bool) {
         let transitions = self.dfa.transitions.get(self.current_state.0);
 
         if transitions.is_none() {
@@ -577,6 +647,117 @@ mod tests {
             (Some(1usize), true)
         );
         assert_eq!(dfa_simulator.simulate_single_char('b'), (None, false));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_int() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"\-{0,1}\d+")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa]);
+
+        assert_eq!(dfa.simulate("0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("1234"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("-1234"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("-0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("aba"), (None, false));
+        assert_eq!(dfa.simulate(""), (None, false));
+        assert_eq!(dfa.simulate("3.14"), (None, false));
+        assert_eq!(dfa.simulate("0.00"), (None, false));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_float() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"\-{0,1}[0-9]+\.\d+")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa]);
+
+        assert_eq!(dfa.simulate("0.0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("-0.0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("-0.00001"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("0.00001"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("3.1415926"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("-3.1415926"), (Some(0usize), true));
+
+        assert_eq!(dfa.simulate("0"), (None, false));
+        assert_eq!(dfa.simulate("1234"), (None, false));
+        assert_eq!(dfa.simulate("-1234"), (None, false));
+        assert_eq!(dfa.simulate("-0"), (None, false));
+        assert_eq!(dfa.simulate("aba"), (None, false));
+        assert_eq!(dfa.simulate(""), (None, false));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_hex() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"(0x){0,1}(((\d|[a-f])+)|((\d|[A-F])+))")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+        println!("{:?}", nfa);
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa]);
+        println!("{:?}", dfa);
+
+        assert_eq!(dfa.simulate("0x0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("0"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("1234"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("0x1A2B3C4D5E6F7890"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("0x1a2b3c4d5e6f7890"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("1a2b3c4d5e6f7890"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("abcdef"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("abcdefg"), (None, false));
+        assert_eq!(dfa.simulate("aBa"), (None, false));
+        assert_eq!(dfa.simulate(""), (None, false));
+        assert_eq!(dfa.simulate("3.14"), (None, false));
+        assert_eq!(dfa.simulate("0.00"), (None, false));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_timestamp() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+        println!("{:?}", nfa);
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa]);
+        println!("{:?}", dfa);
+
+        assert_eq!(dfa.simulate("2015-01-31T15:50:45.39"), (Some(0usize), true));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_static_text() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast(r"TIMESTAMP")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+        println!("{:?}", nfa);
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa]);
+        println!("{:?}", dfa);
+
+        assert_eq!(dfa.simulate("TIMESTAMP"), (Some(0usize), true));
 
         Ok(())
     }
