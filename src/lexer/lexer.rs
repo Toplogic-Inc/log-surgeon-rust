@@ -1,4 +1,4 @@
-use crate::dfa::{State, DFA};
+use crate::dfa::dfa::{State, DFA};
 use crate::error_handling::Error::{LexerInputStreamNotSet, LexerInternalErr, LexerStateUnknown};
 use crate::error_handling::Result;
 use crate::lexer::LexerStream;
