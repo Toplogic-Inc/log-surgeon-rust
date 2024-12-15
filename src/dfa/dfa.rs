@@ -226,15 +226,14 @@ impl DFA {
 
 impl DFA {
     pub fn get_next_state(&self, state: State, c: u8) -> Option<State> {
-        // No bound check
         let transitions = &self.transitions[state.0];
-        let mask = 1u128 << c;
-        for (_, transition) in transitions.iter().enumerate() {
-            if transition.is_some() {
-                return Some(transition.as_ref().unwrap().to_state.clone());
-            }
+        if 128 <= c {
+            return None;
         }
-        None
+        match &transitions[c as usize] {
+            Some(transition) => Some(transition.to_state.clone()),
+            None => None,
+        }
     }
 
     pub fn is_accept_state(&self, state: State) -> Option<usize> {
@@ -299,9 +298,7 @@ impl DFA {
         // Process and add all dfa states
         while let Some(dfa_state) = l_worklist.pop() {
             // Take the immutable borrow into a local variable
-            let nfa_states = {
-                dfa_to_nfa_state_mapping.get(dfa_state.0).unwrap().clone()
-            };
+            let nfa_states = { dfa_to_nfa_state_mapping.get(dfa_state.0).unwrap().clone() };
 
             // Check if this DFA state is an accept state
             for (idx, nfa_state) in nfa_states.iter() {
@@ -338,7 +335,10 @@ impl DFA {
             }
 
             // Process the Epsilon Closure of the Move operation
-            for (symbol, transitions) in move_transitions_symbol_to_transitions_vec.iter().enumerate() {
+            for (symbol, transitions) in move_transitions_symbol_to_transitions_vec
+                .iter()
+                .enumerate()
+            {
                 if transitions.is_empty() {
                     continue;
                 }
@@ -348,7 +348,8 @@ impl DFA {
                 for (idx, transition) in transitions.iter() {
                     destination_nfa_states.push((**idx, (**transition).get_to_state()));
                 }
-                let destination_nfa_states = Rc::new(DFA::epsilon_closure(&nfas, &destination_nfa_states));
+                let destination_nfa_states =
+                    Rc::new(DFA::epsilon_closure(&nfas, &destination_nfa_states));
 
                 // Check if the destination NFA states are already in the DFA states set
                 if !l_nfa_states_to_dfa_mapping.contains_key(&destination_nfa_states) {
@@ -379,15 +380,15 @@ impl DFA {
                 // Add the transition to the DFA
                 dfa_transitions.get_mut(dfa_state.0).unwrap()[symbol] = Some(Transition {
                     from_state: dfa_state.clone(),
-                    symbol_onehot_encoding: crate::nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding(
-                        symbol as u8 as char,
-                    ),
+                    symbol_onehot_encoding:
+                        crate::nfa::nfa::Transition::convert_char_to_symbol_onehot_encoding(
+                            symbol as u8 as char,
+                        ),
                     to_state: destination_dfa_state.clone(),
                     tag: None,
                 });
             }
         }
-
 
         DFA {
             start: State(start_state),
@@ -546,10 +547,11 @@ mod tests {
             }
         }
         assert_eq!(valid_transitions_count, 1);
-        let transitions_from_start_given_a = transitions_from_start
-            .get('a' as usize)
-            .unwrap();
-        assert_eq!(transitions_from_start_given_a.as_ref().unwrap().to_state, State(1));
+        let transitions_from_start_given_a = transitions_from_start.get('a' as usize).unwrap();
+        assert_eq!(
+            transitions_from_start_given_a.as_ref().unwrap().to_state,
+            State(1)
+        );
 
         let transitions_to_accept = dfa.transitions.get(1).unwrap();
         let mut valid_transitions_count = 0;
@@ -559,10 +561,11 @@ mod tests {
             }
         }
         assert_eq!(valid_transitions_count, 1);
-        let transitions_to_accept_given_b = transitions_to_accept
-            .get('b' as usize)
-            .unwrap();
-        assert_eq!(transitions_to_accept_given_b.as_ref().unwrap().to_state, State(2));
+        let transitions_to_accept_given_b = transitions_to_accept.get('b' as usize).unwrap();
+        assert_eq!(
+            transitions_to_accept_given_b.as_ref().unwrap().to_state,
+            State(2)
+        );
 
         // Check correctness given some examples
         assert_eq!(dfa.simulate("a"), (Some(0usize), true));
@@ -800,6 +803,7 @@ mod tests {
         println!("{:?}", dfa);
 
         assert_eq!(dfa.simulate("TIMESTAMP"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("This log "), (None, false));
 
         Ok(())
     }

@@ -3,9 +3,9 @@ use log_surgeon::lexer::BufferedFileStream;
 use log_surgeon::lexer::Lexer;
 use log_surgeon::parser::SchemaConfig;
 
-use std::rc::Rc;
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::rc::Rc;
 
 #[test]
 fn test_lexer_simple() -> Result<()> {
@@ -18,7 +18,9 @@ fn test_lexer_simple() -> Result<()> {
         .join("logs")
         .join("simple.log");
 
-    let parsed_schema = Rc::new(SchemaConfig::parse_from_file(schema_path.to_str().unwrap())?);
+    let parsed_schema = Rc::new(SchemaConfig::parse_from_file(
+        schema_path.to_str().unwrap(),
+    )?);
     let mut lexer = Lexer::new(parsed_schema)?;
     let buffered_file_stream = Box::new(BufferedFileStream::new(log_path.to_str().unwrap())?);
     lexer.set_input_stream(buffered_file_stream);
@@ -39,6 +41,7 @@ fn test_lexer_simple() -> Result<()> {
             curr_line_num += 1;
         }
         parsed_line += &token.get_val().to_string();
+        println!("{:?}", token);
     }
     parsed_lines.push(parsed_line.clone());
     println!("{:?}", parsed_lines);
