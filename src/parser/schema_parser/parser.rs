@@ -7,6 +7,7 @@ use regex_syntax::ast::Ast;
 use serde_yaml::Value;
 use std::collections::{HashMap, HashSet};
 use std::io::Read;
+use std::rc::Rc;
 
 pub struct TimestampSchema {
     regex: String,
@@ -83,23 +84,23 @@ impl SchemaConfig {
     const VAR_KEY: &'static str = "variables";
     const DELIMITER_EKY: &'static str = "delimiters";
 
-    pub fn parse_from_str(yaml_content: &str) -> Result<SchemaConfig> {
-        match Self::load_kv_pairs_from_yaml_content(yaml_content) {
-            Ok(kv_pairs) => Self::load_from_kv_pairs(kv_pairs),
-            Err(e) => Err(YamlParsingError(e)),
-        }
-    }
-
-    pub fn parse_from_file(yaml_file_path: &str) -> Result<SchemaConfig> {
+    pub fn parse_from_file(yaml_file_path: &str) -> Result<Rc<SchemaConfig>> {
         match std::fs::File::open(yaml_file_path) {
             Ok(mut file) => {
                 let mut contents = String::new();
                 if let Err(e) = file.read_to_string(&mut contents) {
                     return Err(IOError(e));
                 }
-                Self::parse_from_str(contents.as_str())
+                Ok(Rc::new(Self::parse_from_str(contents.as_str())?))
             }
             Err(e) => Err(IOError(e)),
+        }
+    }
+
+    fn parse_from_str(yaml_content: &str) -> Result<SchemaConfig> {
+        match Self::load_kv_pairs_from_yaml_content(yaml_content) {
+            Ok(kv_pairs) => Self::load_from_kv_pairs(kv_pairs),
+            Err(e) => Err(YamlParsingError(e)),
         }
     }
 
@@ -185,10 +186,10 @@ mod tests {
             .join("schema.yaml");
         let parsed_schema = SchemaConfig::parse_from_file(schema_path.to_str().unwrap())?;
 
-        assert_eq!(parsed_schema.get_ts_schemas().len(), 3);
-        assert_eq!(parsed_schema.get_var_schemas().len(), 4);
+        assert_eq!(parsed_schema.get_ts_schemas().len(), 5);
+        assert_eq!(parsed_schema.get_var_schemas().len(), 5);
 
-        let delimiters: Vec<char> = vec![' ', '\t', '\n', '\r', ':', ',', '!', ';', '%'];
+        let delimiters: Vec<char> = vec![' ', '\t', '\n', '\r', ':', ',', '!', ';', '%', '[', ']'];
         for delimiter in delimiters {
             assert!(parsed_schema.has_delimiter(delimiter));
         }

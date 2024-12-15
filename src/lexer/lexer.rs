@@ -114,7 +114,7 @@ impl Lexer {
             last_tokenized_pos: 0,
             match_start_pos: 0,
             match_end_pos: 0,
-            line_num: 0,
+            line_num: 1,
         })
     }
 
@@ -127,7 +127,7 @@ impl Lexer {
         self.last_tokenized_pos = 0;
         self.match_start_pos = 0;
         self.match_end_pos = 0;
-        self.line_num = 0;
+        self.line_num = 1;
         self.state = LexerState::ParsingTimestamp;
     }
 
