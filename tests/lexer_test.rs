@@ -41,14 +41,16 @@ fn test_lexer_simple() -> Result<()> {
             curr_line_num += 1;
         }
         parsed_line += &token.get_val().to_string();
+        println!("{:?}", token);
     }
     parsed_lines.push(parsed_line.clone());
+    println!("{:?}", parsed_lines);
 
     let mut expected_lines = Vec::new();
     let reader = io::BufReader::new(File::open(log_path).expect("failed to open log file"));
     for line in reader.lines() {
         let line = line.expect("failed to read line");
-        expected_lines.push(line + "\n");
+        expected_lines.push(line.clone() + "\n");
     }
 
     assert_eq!(parsed_lines.len(), expected_lines.len());
