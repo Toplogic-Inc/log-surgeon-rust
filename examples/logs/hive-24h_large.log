@@ -11,6 +11,7 @@
  - UUID:0xddba9b95eeb3cfb9ccb3d8401d1610d42f0e3aad
  - HashIndex:0xad56993d052a6b692268e8aa013dd02e37e082bf
 2015-03-23 08:09:27,194 INFO [main] org.apache.hadoop.hive.ql.log.PerfLogger: <PERFLOG method=deserializePlan from=org.apache.hadoop.hive.ql.exec.Utilities>
+2015-03-23 08:09:27,194 INFO [main] org.apache.hadoop.hive.ql.log.PerfLogger: 哥们儿来点中文试试
 2015-03-23 08:09:27,194 INFO [main] org.apache.hadoop.hive.ql.exec.Utilities: Deserializing MapWork via kryo
 2015-03-23 08:09:28,203 INFO [main] org.apache.hadoop.hive.ql.log.PerfLogger: </PERFLOG method=deserializePlan start=1427098167194 end=1427098168203 duration=1009 from=org.apache.hadoop.hive.ql.exec.Utilities>
 2015-03-23 08:09:28,337 INFO [main] org.apache.hadoop.io.compress.zlib.ZlibFactory: Successfully loaded & initialized native-zlib library
