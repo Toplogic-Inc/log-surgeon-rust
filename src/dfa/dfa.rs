@@ -1,4 +1,5 @@
 use crate::nfa::nfa::NFA;
+use std::cmp::min;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -303,11 +304,22 @@ impl DFA {
             // Check if this DFA state is an accept state
             for (idx, nfa_state) in nfa_states.iter() {
                 if nfas.get(*idx).unwrap().get_accept() == *nfa_state {
-                    dfa_to_accepted_nfa_state_mapping
-                        .get_mut(dfa_state.0)
-                        .as_mut()
+                    // check if the node is already an accept state
+                    let registered_accept_state = dfa_to_accepted_nfa_state_mapping
+                        .get(dfa_state.0)
                         .unwrap()
-                        .replace((*idx, nfa_state.clone()));
+                        .clone();
+                    let is_update = registered_accept_state.is_none()
+                        || registered_accept_state.unwrap().0 > *idx;
+
+                    if is_update {
+                        dfa_to_accepted_nfa_state_mapping
+                            .get_mut(dfa_state.0)
+                            .as_mut()
+                            .unwrap()
+                            .replace((*idx, nfa_state.clone()));
+                    }
+
                     dfa_accept_states.insert(dfa_state.clone());
                 }
             }
@@ -521,6 +533,28 @@ mod tests {
         Ok(nfa)
     }
 
+    fn create_nfa4() -> Result<NFA> {
+        // Should only match "aa"
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast("aa")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+
+        Ok(nfa)
+    }
+
+    fn create_nfa5() -> Result<NFA> {
+        // Should only match "a*"
+        let mut parser = RegexParser::new();
+        let parsed_ast = parser.parse_into_ast("a*")?;
+
+        let mut nfa = NFA::new();
+        nfa.add_ast_to_nfa(&parsed_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+
+        Ok(nfa)
+    }
+
     #[test]
     fn test_nfa1_from_nfa_to_dfa() -> Result<()> {
         let nfa = create_nfa1()?;
@@ -639,6 +673,42 @@ mod tests {
         assert_eq!(dfa.simulate("cccccab"), (Some(2usize), true));
         assert_eq!(dfa.simulate("cab"), (Some(2usize), true));
         assert_eq!(dfa.simulate(""), (Some(1usize), true));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ambiguity() -> Result<()> {
+        let nfa4 = create_nfa4()?;
+        let nfa5 = create_nfa5()?;
+
+        let dfa = DFA::from_multiple_nfas(vec![nfa4, nfa5]);
+
+        println!("{:?}", dfa);
+
+        assert_eq!(dfa.simulate("aa"), (Some(0usize), true));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_int_hex_ambiguity() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let int_ast = parser.parse_into_ast(r"\-{0,1}\d+")?;
+        let mut int_nfa = NFA::new();
+        int_nfa.add_ast_to_nfa(&int_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+
+        let mut parser = RegexParser::new();
+        let hex_ast = parser.parse_into_ast(r"(0x){0,1}([0-9a-f]+)|([0-9A-F]+)")?;
+        let mut hex_nfa = NFA::new();
+        hex_nfa.add_ast_to_nfa(&hex_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+
+        let dfa = DFA::from_multiple_nfas(vec![int_nfa, hex_nfa]);
+
+        println!("{:?}", dfa);
+
+        assert_eq!(dfa.simulate("10"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("1b"), (Some(1usize), true));
 
         Ok(())
     }
