@@ -64,6 +64,11 @@ fn benchmark_log_parser(
 
     println!("\nBenchmark log parser:");
     println!(
+        "Total size: {}GB",
+        total_size as f64 / (1024 * 1024 * 1024) as f64
+    );
+    println!("Total number of tokens: {}", total_tokens);
+    println!(
         "Total duration: {}s",
         total_duration.as_millis() as f64 / 1000 as f64
     );
@@ -108,6 +113,11 @@ fn benchmark_lexer(
     }
 
     println!("\nBenchmark lexer:");
+    println!(
+        "Total size: {}GB",
+        total_size as f64 / (1024 * 1024 * 1024) as f64
+    );
+    println!("Total number of tokens: {}", total_tokens);
     println!(
         "Total duration: {}s",
         total_duration.as_millis() as f64 / 1000 as f64
