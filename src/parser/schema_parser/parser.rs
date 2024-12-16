@@ -3,9 +3,9 @@ use crate::error_handling::Error::{
 };
 use crate::error_handling::Result;
 use crate::parser::regex_parser::parser::RegexParser;
+use indexmap::IndexMap;
 use regex_syntax::ast::Ast;
 use serde_yaml::Value;
-use std::collections::{HashMap, HashSet};
 use std::io::Read;
 use std::rc::Rc;
 
@@ -105,7 +105,7 @@ impl SchemaConfig {
     }
 
     fn get_key_value<'a>(
-        kv_map: &'a HashMap<String, Value>,
+        kv_map: &'a IndexMap<String, Value>,
         key: &'static str,
     ) -> Result<&'a Value> {
         kv_map.get(key).ok_or_else(|| MissingSchemaKey(key))
@@ -113,12 +113,12 @@ impl SchemaConfig {
 
     fn load_kv_pairs_from_yaml_content(
         yaml_content: &str,
-    ) -> serde_yaml::Result<HashMap<String, Value>> {
-        let kv_map_result: HashMap<String, Value> = serde_yaml::from_str(&yaml_content)?;
+    ) -> serde_yaml::Result<IndexMap<String, Value>> {
+        let kv_map_result: IndexMap<String, Value> = serde_yaml::from_str(&yaml_content)?;
         Ok(kv_map_result)
     }
 
-    fn load_from_kv_pairs(kv_pairs: HashMap<String, Value>) -> Result<Self> {
+    fn load_from_kv_pairs(kv_pairs: IndexMap<String, Value>) -> Result<Self> {
         // Handle timestamps
         let mut ts_schemas: Vec<TimestampSchema> = Vec::new();
         let timestamps = Self::get_key_value(&kv_pairs, Self::TIMESTAMP_KEY)?;
@@ -177,6 +177,7 @@ impl SchemaConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::builder::Str;
 
     #[test]
     fn test_read_example_schema_file() -> Result<()> {
@@ -188,6 +189,21 @@ mod tests {
 
         assert_eq!(parsed_schema.get_ts_schemas().len(), 5);
         assert_eq!(parsed_schema.get_var_schemas().len(), 6);
+
+        let expected_var_names: Vec<String> = vec![
+            "int".to_string(),
+            "float".to_string(),
+            "hex".to_string(),
+            "loglevel".to_string(),
+            "field_identifier".to_string(),
+            "path".to_string(),
+        ];
+        let actual_var_names: Vec<String> = parsed_schema
+            .get_var_schemas()
+            .iter()
+            .map(|v| v.get_name().to_string())
+            .collect();
+        assert_eq!(expected_var_names, actual_var_names);
 
         let delimiters: Vec<char> = vec![' ', '\t', '\n', '\r', ':', ',', '!', ';', '%'];
         for delimiter in delimiters {
