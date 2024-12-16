@@ -1,0 +1,8 @@
+timestamp:
+  - 'TIMESTAMP'
+
+delimiters: " \t\r\n:,!;%"
+
+variables:
+  int: '\-{0,1}\d+'
+  with_delimiter: 'a a'

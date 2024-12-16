@@ -1,4 +1,5 @@
 # Build dir
+/examples/target
 /target
 
 # Dev env configs
