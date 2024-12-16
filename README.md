@@ -1,7 +1,4 @@
 # log-surgeon: A performant log parsing library
-Project Link: [Homepage][home-page]
-
-Video Demo Link: [Video Demo][video-demo]
 
 [![Build status][badge-build-status]][project-gh-action]
 ![Apache Lisensed][badge-apache]
@@ -84,8 +81,6 @@ Our project, [log-surgeon-rust][home-page], is designed to improve CLP's parsing
 safe and high-performant regular expression engine specialized for unstructured logs, allowing users
 to extract named variables from raw text log messages efficiently according to user-defined schema.
 
----
-
 ## Objective
 The objective of this project is to fill the gap explained in the motivation above in the current
 Rust ecosystem. We shall deliver a high-performance and memory-safe log parsing library using Rust.
@@ -107,8 +102,6 @@ The log parsing interface will provide user programmatic APIs to:
 - Specify inputs (variable schemas) to configure the log parser
 - Feed input log stream to the log parser
 - Retrieve outputs (parsed log events structured according to the user schema) from the parser
-
----
 
 ## Features  
 As a log parsing library, log-surgeon provides the following features that differ from general text
@@ -199,8 +192,6 @@ The example uses the repository relative path to include the dependency. If you 
 library in your project, you can follow the user's guide above where you should specify the git URL
 to obtain the latest version of the library.
 
----
-
 ## Contributions by each team member
 1. **[Louis][github-siwei]**
 - Implemented the draft version of the AST-to-NFA conversion.
@@ -216,8 +207,6 @@ to obtain the latest version of the library.
 
 Both members contributed to the overall architecture, unit testing, integration testing, and library
 finalization. Both members reviewed the other's implementation through GitHub's Pull Request.
-
----
 
 ## Lessons learned and concluding remarks
 This project provided us with an excellent opportunity to learn about the Rust programming language.
