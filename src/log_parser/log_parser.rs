@@ -124,7 +124,7 @@ impl LogEvent {
     pub fn to_string(&self) -> String {
         let mut result = String::new();
         for token in &self.tokens {
-            result += &token.get_val();
+            result += &token.get_buf_as_string();
         }
         result
     }
@@ -151,7 +151,7 @@ impl Debug for LogEvent {
                         "\t[Var({:?})|{}]: \"{}\"\n",
                         self.schema_config.get_var_schemas()[var_id].name,
                         token.get_line_num(),
-                        token.get_val().escape_default()
+                        token.get_buf_as_string().escape_default()
                     )
                     .as_str()
                 }
@@ -160,7 +160,7 @@ impl Debug for LogEvent {
                         "\t[Timestamp({})|{}]: \"{}\"\n",
                         ts_id,
                         token.get_line_num(),
-                        token.get_val().escape_default()
+                        token.get_buf_as_string().escape_default()
                     )
                     .as_str()
                 }
@@ -169,7 +169,7 @@ impl Debug for LogEvent {
                         "\t[{:?}|{}]: \"{}\"\n",
                         token.get_token_type(),
                         token.get_line_num(),
-                        token.get_val().escape_default()
+                        token.get_buf_as_string().escape_default()
                     )
                     .as_str()
                 }

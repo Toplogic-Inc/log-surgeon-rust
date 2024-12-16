@@ -71,8 +71,8 @@ impl SchemaConfig {
         &self.var_schemas
     }
 
-    pub fn has_delimiter(&self, delimiter: char) -> bool {
-        if false == delimiter.is_ascii() {
+    pub fn has_delimiter(&self, delimiter: u8) -> bool {
+        if 128 <= delimiter {
             return false;
         }
         self.delimiters[delimiter as usize]
@@ -207,7 +207,7 @@ mod tests {
 
         let delimiters: Vec<char> = vec![' ', '\t', '\n', '\r', ':', ',', '!', ';', '%'];
         for delimiter in delimiters {
-            assert!(parsed_schema.has_delimiter(delimiter));
+            assert!(parsed_schema.has_delimiter(delimiter as u8));
         }
 
         Ok(())

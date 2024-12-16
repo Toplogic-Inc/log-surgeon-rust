@@ -227,10 +227,10 @@ impl DFA {
 
 impl DFA {
     pub fn get_next_state(&self, state: State, c: u8) -> Option<State> {
-        let transitions = &self.transitions[state.0];
         if 128 <= c {
             return None;
         }
+        let transitions = &self.transitions[state.0];
         match &transitions[c as usize] {
             Some(transition) => Some(transition.to_state.clone()),
             None => None,
