@@ -145,7 +145,35 @@ impl Debug for LogEvent {
                 curr_line_num = token.get_line_num();
                 result += format!("Line {}:\n", curr_line_num).as_str();
             }
-            result += format!("\t{:?}\n", token).as_str();
+            match token.get_token_type() {
+                TokenType::Variable(var_id) => {
+                    result += format!(
+                        "\t[Var({:?})|{}]: \"{}\"\n",
+                        self.schema_config.get_var_schemas()[var_id].name,
+                        token.get_line_num(),
+                        token.get_val().escape_default()
+                    )
+                    .as_str()
+                }
+                TokenType::Timestamp(ts_id) => {
+                    result += format!(
+                        "\t[Timestamp({})|{}]: \"{}\"\n",
+                        ts_id,
+                        token.get_line_num(),
+                        token.get_val().escape_default()
+                    )
+                    .as_str()
+                }
+                _ => {
+                    result += format!(
+                        "\t[{:?}|{}]: \"{}\"\n",
+                        token.get_token_type(),
+                        token.get_line_num(),
+                        token.get_val().escape_default()
+                    )
+                    .as_str()
+                }
+            }
         }
 
         write!(f, "{}", result)
