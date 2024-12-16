@@ -17,5 +17,5 @@ variables:
   float: '\-{0,1}[0-9]+\.[0-9]+'
   hex: '0x(((\d|[a-f])+)|((\d|[A-F])+))'
   loglevel: '(INFO)|(DEBUG)|(WARN)|(ERROR)|(TRACE)|(FATAL)'
-  thread: '\[(\w)+\]'
+  thread_identifier: '\[(\w)+\]'
   path: '(/(\w|\.|\-|\*)+)+(/)*'
