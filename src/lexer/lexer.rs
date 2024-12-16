@@ -44,7 +44,6 @@ pub enum TokenType {
     Variable(usize),
     StaticText,
     StaticTextWithEndLine,
-    End,
 }
 
 pub struct Token {

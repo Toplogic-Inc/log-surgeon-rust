@@ -18,7 +18,7 @@ delimiters when splitting the text into tokens.
 ## Schema Configuration
 
 The schema config, written in YAML format, allows users to define custom delimiters and
-timestamp/variable patterns. The example schema config can be found [here](../examples/schema.yaml)
+timestamp/variable patterns. The example schema config can be found [here](../examples/schema.yaml).
 
 ### Delimiters
 Delimiters are defined as a string, where every character in the string is treated as an individual

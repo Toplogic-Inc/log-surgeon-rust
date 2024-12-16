@@ -152,6 +152,28 @@ log-surgeon = { git = "https://github.com/Toplogic-Inc/log-surgeon-rust", branch
 log-surgeon allows users to customize their own log parser using schema. For detailed instructions,
 refer to the [Schema Documentation](docs/Schema.md).
 
+### Lexer
+
+log-surgeon provides its lexer as a low-level API, which parses log events into a stream of tokens.
+Tokens can be classified into the following types:
+
+- **Timestamp**: A token that matches a defined timestamp pattern.
+- **Variable**: A token that matches a defined variable pattern.
+- **StaticText**: A token that does not match any timestamp or variable pattern.
+- **StaticTextWithNewline**: A variant of StaticText that ends with a newline character ('\n').
+
+**NOTE**:
+- Each token holds a byte buffer as its value.
+- A timestamp token includes an ID that corresponds to the regex pattern defined in the schema
+config.
+- A variable token includes an ID that maps to the variable name and its associated regex pattern in
+the schema config.
+- Each token also retains source information, indicating the line in the input from which the token 
+was extracted.
+
+**Example**:
+
+
 ## Reproducibility Guide
 There are several regression tests in the `tests` directory of the repository as well as in the
 individual components of the project. You can run the tests to ensure that the library is working
