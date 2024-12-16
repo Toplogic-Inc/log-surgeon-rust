@@ -187,9 +187,9 @@ mod tests {
         let parsed_schema = SchemaConfig::parse_from_file(schema_path.to_str().unwrap())?;
 
         assert_eq!(parsed_schema.get_ts_schemas().len(), 5);
-        assert_eq!(parsed_schema.get_var_schemas().len(), 5);
+        assert_eq!(parsed_schema.get_var_schemas().len(), 6);
 
-        let delimiters: Vec<char> = vec![' ', '\t', '\n', '\r', ':', ',', '!', ';', '%', '[', ']'];
+        let delimiters: Vec<char> = vec![' ', '\t', '\n', '\r', ':', ',', '!', ';', '%'];
         for delimiter in delimiters {
             assert!(parsed_schema.has_delimiter(delimiter));
         }

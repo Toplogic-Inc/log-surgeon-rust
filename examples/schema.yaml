@@ -10,11 +10,12 @@ timestamp:
   # E.g. 2015-01-31 15:50:45
   - '\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}'
 
-delimiters: " \t\r\n:,!;%[]"
+delimiters: " \t\r\n:,!;%"
 
 variables:
   int: '\-{0,1}\d+'
   float: '\-{0,1}[0-9]+\.[0-9]+'
-  hex: '(0x){0,1}((\d|[a-f])+)|((\d|[A-F])+)'
+  hex: '0x(((\d|[a-f])+)|((\d|[A-F])+))'
   loglevel: '(INFO)|(DEBUG)|(WARN)|(ERROR)|(TRACE)|(FATAL)'
+  thread_identifier: '\[(\w)+\]'
   path: '(/(\w|\.|\-|\*)+)+(/)*'
