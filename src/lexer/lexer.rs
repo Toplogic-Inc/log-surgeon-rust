@@ -27,11 +27,11 @@ pub struct Lexer {
     dfa_state: State,
 
     input_stream: Option<Box<dyn LexerStream>>,
-    buf: Vec<char>,
+    buf: Vec<u8>,
     buf_cursor_pos: usize,
     token_queue: VecDeque<Token>,
 
-    last_delimiter: Option<char>,
+    last_delimiter: Option<u8>,
     last_tokenized_pos: usize,
     match_start_pos: usize,
     match_end_pos: usize,
@@ -48,7 +48,7 @@ pub enum TokenType {
 }
 
 pub struct Token {
-    val: String,
+    buf: Vec<u8>,
     token_type: TokenType,
     line_num: usize,
 }
@@ -60,14 +60,18 @@ impl Debug for Token {
             "[{:?}|{}]: \"{}\"",
             self.token_type,
             self.line_num,
-            self.val.escape_default()
+            self.get_buf_as_string().escape_default()
         )
     }
 }
 
 impl Token {
-    pub fn get_val(&self) -> &str {
-        self.val.as_str()
+    pub fn get_buf(&self) -> &[u8] {
+        self.buf.as_slice()
+    }
+
+    pub fn get_buf_as_string(&self) -> String {
+        String::from_utf8_lossy(&self.buf).to_string()
     }
 
     pub fn get_token_type(&self) -> TokenType {
@@ -170,7 +174,7 @@ impl Lexer {
                     let delimiter = self.last_delimiter.unwrap();
                     self.last_delimiter = None;
                     match delimiter {
-                        '\n' => {
+                        b'\n' => {
                             self.generate_token(
                                 self.buf_cursor_pos,
                                 TokenType::StaticTextWithEndLine,
@@ -246,7 +250,7 @@ impl Lexer {
                 LexerState::EndOfStream => {
                     if self.buf_cursor_pos > self.last_tokenized_pos {
                         let token_type = if self.last_delimiter.is_some()
-                            && self.last_delimiter.unwrap() == '\n'
+                            && self.last_delimiter.unwrap() == b'\n'
                         {
                             // TODO: This seems not possible..
                             TokenType::StaticTextWithEndLine
@@ -314,7 +318,7 @@ impl Lexer {
         }
     }
 
-    fn get_next_char_from_buffer(&mut self) -> Result<Option<char>> {
+    fn get_next_char_from_buffer(&mut self) -> Result<Option<u8>> {
         let pos = self.buf_cursor_pos;
         if pos == self.buf.len() {
             match self
@@ -332,7 +336,7 @@ impl Lexer {
         Ok(Some(self.buf[pos]))
     }
 
-    fn capture_delimiter(&mut self, c: char) -> bool {
+    fn capture_delimiter(&mut self, c: u8) -> bool {
         if self.schema_config.has_delimiter(c) {
             self.last_delimiter = Some(c);
             return true;
@@ -340,12 +344,8 @@ impl Lexer {
         false
     }
 
-    fn simulate_var_dfa_and_set_lexer_state(&mut self, c: char, delimiter_dst_state: LexerState) {
-        if false == c.is_ascii() {
-            self.state = LexerState::SeekingToTheNextDelimiter;
-            return;
-        }
-        match self.var_dfa.get_next_state(self.dfa_state.clone(), c as u8) {
+    fn simulate_var_dfa_and_set_lexer_state(&mut self, c: u8, delimiter_dst_state: LexerState) {
+        match self.var_dfa.get_next_state(self.dfa_state.clone(), c) {
             Some(next_dfa_state) => {
                 self.dfa_state = next_dfa_state;
                 match self.var_dfa.is_accept_state(self.dfa_state.clone()) {
@@ -374,7 +374,10 @@ impl Lexer {
             return Err(LexerInternalErr("Tokenization end position corrupted"));
         }
         self.token_queue.push_back(Token {
-            val: self.buf[self.last_tokenized_pos..end_pos].iter().collect(),
+            buf: self.buf[self.last_tokenized_pos..end_pos]
+                .iter()
+                .map(|c| c.clone())
+                .collect(),
             line_num: self.line_num,
             token_type,
         });
@@ -406,7 +409,7 @@ impl Lexer {
             dst_idx += 1;
             src_idx += 1;
         }
-        self.buf.resize(dst_idx, 0 as char);
+        self.buf.resize(dst_idx, 0);
         self.buf_cursor_pos -= self.last_tokenized_pos;
         self.last_tokenized_pos = 0;
         // No need to reset match_start/end

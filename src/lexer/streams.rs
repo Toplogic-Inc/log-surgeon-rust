@@ -1,21 +1,25 @@
 use super::lexer_stream::LexerStream;
 use crate::error_handling::Error::IOError;
 use crate::error_handling::Result;
-use std::io::BufRead;
+use std::io::{self, BufReader, Read};
+
+const BUF_SIZE: usize = 4096 * 16;
 
 pub struct BufferedFileStream {
-    line_it: std::io::Lines<std::io::BufReader<std::fs::File>>,
-    line: Option<Vec<char>>,
+    buf_reader: BufReader<std::fs::File>,
     pos: usize,
+    end: usize,
+    buffer: [u8; 4096],
 }
 
 impl BufferedFileStream {
     pub fn new(path: &str) -> Result<Self> {
         match std::fs::File::open(path) {
             Ok(file) => Ok(Self {
-                line_it: std::io::BufReader::new(file).lines(),
-                line: None,
+                buf_reader: BufReader::new(file),
                 pos: 0,
+                end: 0,
+                buffer: [0; 4096],
             }),
             Err(e) => Err(IOError(e)),
         }
@@ -23,27 +27,21 @@ impl BufferedFileStream {
 }
 
 impl LexerStream for BufferedFileStream {
-    fn get_next_char(&mut self) -> Result<Option<char>> {
-        if self.line.is_none() {
-            let next_line = self.line_it.next();
-            if next_line.is_none() {
-                return Ok(None);
-            }
-            match next_line.unwrap() {
-                Ok(line) => {
-                    self.line = Some(line.chars().collect());
-                    self.line.as_mut().unwrap().push('\n');
+    fn get_next_char(&mut self) -> Result<Option<u8>> {
+        if self.pos == self.end {
+            match self.buf_reader.read(&mut self.buffer) {
+                Ok(byte_read) => {
+                    if 0 == byte_read {
+                        return Ok(None);
+                    }
+                    self.end = byte_read;
                     self.pos = 0;
                 }
                 Err(e) => return Err(IOError(e)),
             }
         }
-
-        let c = self.line.as_ref().unwrap()[self.pos];
+        let c = self.buffer[self.pos];
         self.pos += 1;
-        if self.pos == self.line.as_ref().unwrap().len() {
-            self.line = None;
-        }
         Ok(Some(c))
     }
 }

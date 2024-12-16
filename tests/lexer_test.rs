@@ -43,7 +43,7 @@ fn test_lexer_simple() -> Result<()> {
                 parsed_line.clear();
                 curr_line_num += 1;
             }
-            parsed_line += &token.get_val().to_string();
+            parsed_line += &token.get_buf_as_string().to_string();
             println!("{:?}", token);
         }
         parsed_lines.push(parsed_line.clone());
