@@ -9,7 +9,7 @@ pub struct BufferedFileStream {
     buf_reader: BufReader<std::fs::File>,
     pos: usize,
     end: usize,
-    buffer: [u8; 4096],
+    buffer: [u8; BUF_SIZE],
 }
 
 impl BufferedFileStream {
@@ -19,7 +19,7 @@ impl BufferedFileStream {
                 buf_reader: BufReader::new(file),
                 pos: 0,
                 end: 0,
-                buffer: [0; 4096],
+                buffer: [0; BUF_SIZE],
             }),
             Err(e) => Err(IOError(e)),
         }
