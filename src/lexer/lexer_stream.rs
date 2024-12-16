@@ -1,5 +1,5 @@
 use crate::error_handling::Result;
 
 pub trait LexerStream {
-    fn get_next_char(&mut self) -> Result<Option<char>>;
+    fn get_next_char(&mut self) -> Result<Option<u8>>;
 }

@@ -3,20 +3,21 @@ Project Link: [Homepage][home-page]
 
 Video Demo Link: [Video Demo][video-demo]
 
----
-
-## Team Members
-- Student 1: Siwei (Louis) He, 1004220960, siwei.he@mail.utoronto.ca
-- Student 2: Zhihao Lin, 1005071299, zh.lin@mail.utoronto.ca
-
----
+[![Build status][badge-build-status]][project-gh-action]
+![Apache Lisensed][badge-apache]
 
 ## Introduction
 
-`log-surgeon` is a library for high-performance parsing of unstructured text
-logs implemented using Rust.
+`log-surgeon` is a library for high-performance parsing of unstructured text logs implemented using
+Rust. This project originated as the course project for
+[ECE1724F1 Performant Software Systems with Rust][ece1724], offered in 2024 at the University of
+Toronto.
 
----
+- Project Link: [Homepage][home-page]
+- Video Demo Link: [Video Demo][video-demo]
+- Team Members
+  - Student 1: [Siwei (Louis) He][github-siwei], 1004220960, siwei.he@mail.utoronto.ca
+  - Student 2: [Zhihao Lin][github-zhihao], 1005071299, zh.lin@mail.utoronto.ca
 
 ## Motivation
 Today's large technology companies generate logs the magnitude of petabytes per day as a critical
@@ -240,17 +241,20 @@ The future work:
 - Implement [tagged-DFA][wiki-tagged-dfa] to support more powerful variable extraction.
 - Optimize the lexer to emit tokens based on buffer views, reducing internal string copying.
 
-
+[badge-apache]: https://img.shields.io/badge/license-APACHE-blue.svg
+[badge-build-status]: https://github.com/Toplogic-Inc/log-surgeon-rust/workflows/CI/badge.svg
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
 [clp-s-paper]: https://www.usenix.org/system/files/osdi24-wang-rui.pdf
+[ece1724]: https://www.eecg.toronto.edu/~bli/ece1724
 [github-clp]: https://github.com/y-scope/clp
 [github-siwei]: https://github.com/Louis-He
 [github-zhihao]: https://github.com/LinZhihao-723
 [hadoop-logs]: https://zenodo.org/records/7114847
 [home-page]: https://github.com/Toplogic-Inc/log-surgeon-rust
 [mongodb-logs]: https://zenodo.org/records/11075361
+[project-gh-action]: https://github.com/Toplogic-Inc/log-surgeon-rust/actions
 [regex-syntax-ast-Ast]: https://docs.rs/regex-syntax/latest/regex_syntax/ast/enum.Ast.html
 [wiki-dfa]: https://en.wikipedia.org/wiki/Deterministic_finite_automaton
 [wiki-nfa]: https://en.wikipedia.org/wiki/Nondeterministic_finite_automaton
 [wiki-tagged-dfa]: https://en.wikipedia.org/wiki/Tagged_Deterministic_Finite_Automaton
-[video-demo]: TODO
+[video-demo]: https://www.youtube.com/watch?v=0mJwwBKXU7A&ab_channel=SiweiHe
