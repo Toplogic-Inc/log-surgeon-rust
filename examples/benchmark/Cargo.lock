@@ -52,6 +52,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "benchmark"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "log-surgeon",
+]
+
+[[package]]
 name = "clap"
 version = "4.5.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -188,14 +196,6 @@ dependencies = [
  "ryu",
  "serde",
  "unsafe-libyaml",
-]
-
-[[package]]
-name = "simple-parser"
-version = "0.1.0"
-dependencies = [
- "clap",
- "log-surgeon",
 ]
 
 [[package]]
