@@ -3,7 +3,7 @@ use crate::error_handling::Error::IOError;
 use crate::error_handling::Result;
 use std::io::{self, BufReader, Read};
 
-const BUF_SIZE: usize = 4096 * 16;
+const BUF_SIZE: usize = 4096 * 8;
 
 pub struct BufferedFileStream {
     buf_reader: BufReader<std::fs::File>,
