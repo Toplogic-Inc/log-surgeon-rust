@@ -128,6 +128,10 @@ impl LogEvent {
         }
         result
     }
+
+    pub fn get_num_tokens(&self) -> usize {
+        self.tokens.len()
+    }
 }
 
 impl Debug for LogEvent {
