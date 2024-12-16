@@ -545,7 +545,7 @@ mod tests {
     }
 
     fn create_nfa5() -> Result<NFA> {
-        // Should only match "ab"
+        // Should only match "a*"
         let mut parser = RegexParser::new();
         let parsed_ast = parser.parse_into_ast("a*")?;
 
@@ -686,13 +686,29 @@ mod tests {
 
         println!("{:?}", dfa);
 
-        // Check correctness given some examples
-        // Should match:
-        // "a" or "ab"
-
-        // assert_eq!(dfa.simulate("a"), (Some(1usize), true));
         assert_eq!(dfa.simulate("aa"), (Some(0usize), true));
-        // assert_eq!(dfa.simulate("aaa"), (Some(1usize), false));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_int_hex_ambiguity() -> Result<()> {
+        let mut parser = RegexParser::new();
+        let int_ast = parser.parse_into_ast(r"\-{0,1}\d+")?;
+        let mut int_nfa = NFA::new();
+        int_nfa.add_ast_to_nfa(&int_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+
+        let mut parser = RegexParser::new();
+        let hex_ast = parser.parse_into_ast(r"(0x){0,1}([0-9a-f]+)|([0-9A-F]+)")?;
+        let mut hex_nfa = NFA::new();
+        hex_nfa.add_ast_to_nfa(&hex_ast, NFA::START_STATE, NFA::ACCEPT_STATE)?;
+
+        let dfa = DFA::from_multiple_nfas(vec![int_nfa, hex_nfa]);
+
+        println!("{:?}", dfa);
+
+        assert_eq!(dfa.simulate("10"), (Some(0usize), true));
+        assert_eq!(dfa.simulate("1b"), (Some(1usize), true));
 
         Ok(())
     }
