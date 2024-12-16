@@ -1,22 +1,20 @@
 # log-surgeon: A performant log parsing library
-Project Link: [Homepage][home-page]
 
-Video Demo Link: [Video Demo][video-demo]
-
----
-
-## Team Members
-- Student 1: Siwei (Louis) He, 1004220960, siwei.he@mail.utoronto.ca
-- Student 2: Zhihao Lin, 1005071299, zh.lin@mail.utoronto.ca
-
----
+[![Build status][badge-build-status]][project-gh-action]
+![Apache Lisensed][badge-apache]
 
 ## Introduction
 
-`log-surgeon` is a library for high-performance parsing of unstructured text
-logs implemented using Rust.
+`log-surgeon` is a library for high-performance parsing of unstructured text logs implemented using
+Rust. This project originated as the course project for
+[ECE1724F1 Performant Software Systems with Rust][ece1724], offered in 2024 at the University of
+Toronto.
 
----
+- Project Link: [Homepage][home-page]
+- Video Demo Link: [Video Demo][video-demo]
+- Team Members
+  - Student 1: [Siwei (Louis) He][github-siwei], 1004220960, siwei.he@mail.utoronto.ca
+  - Student 2: [Zhihao Lin][github-zhihao], 1005071299, zh.lin@mail.utoronto.ca
 
 ## Motivation
 Today's large technology companies generate logs the magnitude of petabytes per day as a critical
@@ -83,8 +81,6 @@ Our project, [log-surgeon-rust][home-page], is designed to improve CLP's parsing
 safe and high-performant regular expression engine specialized for unstructured logs, allowing users
 to extract named variables from raw text log messages efficiently according to user-defined schema.
 
----
-
 ## Objective
 The objective of this project is to fill the gap explained in the motivation above in the current
 Rust ecosystem. We shall deliver a high-performance and memory-safe log parsing library using Rust.
@@ -106,8 +102,6 @@ The log parsing interface will provide user programmatic APIs to:
 - Specify inputs (variable schemas) to configure the log parser
 - Feed input log stream to the log parser
 - Retrieve outputs (parsed log events structured according to the user schema) from the parser
-
----
 
 ## Features  
 As a log parsing library, log-surgeon provides the following features that differ from general text
@@ -133,12 +127,8 @@ feature provides APIs for:
 - Merging multiple NFAs into a single DFA.
 - Simulating a DFA with character streams or strings.
 
----
-
 ## Architecture Overview
 ![log-surgeon-arch-overview](docs/src/overall-arch-diagram.png)
-
----
 
 ## User's Guide
 log-surgeon is a Rust library for high-performance parsing of unstructured text logs. It is being 
@@ -184,8 +174,6 @@ The example uses the repository relative path to include the dependency. If you 
 library in your project, you can follow the user's guide above where you should specify the git URL
 to obtain the latest version of the library.
 
----
-
 ## Contributions by each team member
 1. **[Louis][github-siwei]**
 - Implemented the draft version of the AST-to-NFA conversion.
@@ -201,8 +189,6 @@ to obtain the latest version of the library.
 
 Both members contributed to the overall architecture, unit testing, integration testing, and library
 finalization. Both members reviewed the other's implementation through GitHub's Pull Request.
-
----
 
 ## Lessons learned and concluding remarks
 This project provided us with an excellent opportunity to learn about the Rust programming language.
@@ -226,17 +212,20 @@ The future work:
 - Implement [tagged-DFA][wiki-tagged-dfa] to support more powerful variable extraction.
 - Optimize the lexer to emit tokens based on buffer views, reducing internal string copying.
 
-
+[badge-apache]: https://img.shields.io/badge/license-APACHE-blue.svg
+[badge-build-status]: https://github.com/Toplogic-Inc/log-surgeon-rust/workflows/CI/badge.svg
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
 [clp-s-paper]: https://www.usenix.org/system/files/osdi24-wang-rui.pdf
+[ece1724]: https://www.eecg.toronto.edu/~bli/ece1724
 [github-clp]: https://github.com/y-scope/clp
 [github-siwei]: https://github.com/Louis-He
 [github-zhihao]: https://github.com/LinZhihao-723
 [hadoop-logs]: https://zenodo.org/records/7114847
 [home-page]: https://github.com/Toplogic-Inc/log-surgeon-rust
 [mongodb-logs]: https://zenodo.org/records/11075361
+[project-gh-action]: https://github.com/Toplogic-Inc/log-surgeon-rust/actions
 [regex-syntax-ast-Ast]: https://docs.rs/regex-syntax/latest/regex_syntax/ast/enum.Ast.html
 [wiki-dfa]: https://en.wikipedia.org/wiki/Deterministic_finite_automaton
 [wiki-nfa]: https://en.wikipedia.org/wiki/Nondeterministic_finite_automaton
 [wiki-tagged-dfa]: https://en.wikipedia.org/wiki/Tagged_Deterministic_Finite_Automaton
-[video-demo]: TODO
+[video-demo]: https://www.youtube.com/watch?v=0mJwwBKXU7A&ab_channel=SiweiHe
