@@ -133,32 +133,24 @@ feature provides APIs for:
 - Merging multiple NFAs into a single DFA.
 - Simulating a DFA with character streams or strings.
 
----
-
-## Architecture Overview
-![log-surgeon-arch-overview](docs/src/overall-arch-diagram.png)
-
----
 
 ## User's Guide
-log-surgeon is a Rust library for high-performance parsing of unstructured text logs. It is being 
-shipped as a Rust crate and can be included in your Rust project by adding the following line to
-your `Cargo.toml` file:
+
+log-surgeon is a Rust library for high-performance parsing of unstructured text logs. It is
+being shipped as a Rust crate and can be included in your Rust project by adding the following line
+to your `Cargo.toml` file:
 ```toml
 [dependencies]
 log-surgeon = { git = "https://github.com/Toplogic-Inc/log-surgeon-rust", branch = "main" }
 ```
 
-Example usage of the library can be found in the examples directory of the repository. You can use
-the following code to confirm that you successfully included the library and check the version of
-the library:
-```rust
-extern crate log_surgeon;
+### Architecture Overview
+![log-surgeon-arch-overview](docs/src/overall-arch-diagram.png)
 
-fn main() {
-    println!("You are using log-surgeon version: {}", log_surgeon::version());
-}
-```
+### User-defined Schema Config
+
+log-surgeon allows users to customize their own log parser using schema. For detailed instructions,
+refer to the [Schema Documentation](docs/Schema.md).
 
 ## Reproducibility Guide
 There are several regression tests in the `tests` directory of the repository as well as in the
