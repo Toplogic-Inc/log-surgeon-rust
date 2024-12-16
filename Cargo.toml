@@ -8,3 +8,7 @@ clap = "4.5.23"
 indexmap = { version = "2.7.0", features = ["serde"] }
 regex-syntax = "0.8.5"
 serde_yaml = "0.9.34"
+
+[features]
+regex-engine = []
+default = []
