@@ -120,6 +120,8 @@ parsers:
   - A **low-level API** for streaming lexer-generated tokens.
   - A **high-level API** that structures tokens into parsed log events for easier consumption.
 
+Check **User's Guide** section for more details.
+
 As the library prioritizes log parsing, the regex engine is not part of the default API. To access
 regex-specific functionality, enable the `regex-engine` feature in the Cargo configuration. This
 feature provides APIs for:
@@ -172,9 +174,9 @@ trait, which consumes the stream byte by byte. By default, we provide
 
 **Example**:
 
-A simple example program is provided in [examples/lexer](examples/lexer) to parse a given log file
-and print all the tokens. You can use the following commands to run the program and parse the sample
-logs:
+A simple example program is provided in [examples/lexer](examples/lexer/src/main.rs) to parse a
+given log file and print all the tokens. You can use the following commands to run the program and
+parse the sample logs:
 ```shell
 cd examples/lexer
 cargo run -- ../schema.yaml ../logs/hive-24h.log
@@ -209,9 +211,9 @@ the end-of-line due to file/stream truncations.
 
 **Example**:
 
-A simple example program is provided in [examples/simple-parser](examples/simple-parser) to parse a
-given log file and print all the constructed log events. You can use the following commands to run
-the program and parse the sample logs:
+A simple example program is provided in [examples/simple-parser](examples/simple-parser/src/main.rs)
+to parse a given log file and print all the constructed log events. You can use the following
+commands to run the program and parse the sample logs:
 ```shell
 cd examples/simple-parser
 cargo run -- ../schema.yaml ../logs/hive-24h.log
@@ -219,6 +221,16 @@ cargo run -- ../schema.yaml ../logs/hive-24h.log
 # cargo run -- <SCHEMA_FILE_PATH> <INPUT_FILE_PATH>
 ```
 
+## Experimental Results
+
+We've tested and benchmarked both lexer and log parser APIs on real-world unstructured log dataset.
+This section demonstrates our experimental results.
+
+| Dataset                                | Total Log Size (GByte) | # Tokens   | Lexer Execution Time (real time in seconds) | Lexer Throughput (#tokens / sec) | Parser Execution Time (real time in seconds) | Parser Throughput (MByte / sec) |
+|----------------------------------------|------------------------|------------|---------------------------------------------|----------------------------------|---------------------------------------------|---------------------------------|
+| [hive-24hr][log-hive]                  | 1.99                   | 62334502   | 9.726                                       | 6409058.40                       | 10.125                                      | 201.08                          |
+| [openstack-24hr][log-open-stack]       | 33.00                  | 878471152  | 178.398                                     | 4924220.85                       | 198.826                                     | 169.94                          |
+| [hadoop-cluster1-worker1][log-hadoop] | 84.77                  | 2982800187 | 442.400                                     | 6742010.28                       | 492.523                                     | 176.25                          |
 
 ## Reproducibility Guide
 There are several regression tests in the `tests` directory of the repository as well as in the
@@ -292,6 +304,9 @@ The future work:
 [github-zhihao]: https://github.com/LinZhihao-723
 [hadoop-logs]: https://zenodo.org/records/7114847
 [home-page]: https://github.com/Toplogic-Inc/log-surgeon-rust
+[log-hadoop]: https://zenodo.org/records/7114847
+[log-hive]: https://zenodo.org/records/7094921
+[log-open-stack]: https://zenodo.org/records/7094972
 [mongodb-logs]: https://zenodo.org/records/11075361
 [project-gh-action]: https://github.com/Toplogic-Inc/log-surgeon-rust/actions
 [regex-syntax-ast-Ast]: https://docs.rs/regex-syntax/latest/regex_syntax/ast/enum.Ast.html
