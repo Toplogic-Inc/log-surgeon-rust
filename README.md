@@ -156,7 +156,7 @@ Tokens can be classified into the following types:
 - **StaticText**: A token that does not match any timestamp or variable pattern.
 - **StaticTextWithNewline**: A variant of StaticText that ends with a newline character ('\n').
 
-**NOTE**:
+**Tips**:
 - Each token holds a byte buffer as its value.
 - A timestamp token includes an ID that corresponds to the regex pattern defined in the schema
 config.
@@ -165,7 +165,59 @@ the schema config.
 - Each token also retains source information, indicating the line in the input from which the token 
 was extracted.
 
+The lexer also allows users to define their own **custom input type**. To integrate a custom input
+log stream, it must implement the [log_surgeon::lexer::LexerStream](src/lexer/lexer_stream.rs)
+trait, which consumes the stream byte by byte. By default, we provide
+[log_surgeon::Lexer::BufferedFileStream](src/lexer/streams.rs) to read a log file from file system.
+
 **Example**:
+
+A simple example program is provided in [examples/lexer](examples/lexer) to parse a given log file
+and print all the tokens. You can use the following commands to run the program and parse the sample
+logs:
+```shell
+cd examples/lexer
+cargo run -- ../schema.yaml ../logs/hive-24h.log
+# If you want to try some other inputs, run:
+# cargo run -- <SCHEMA_FILE_PATH> <INPUT_FILE_PATH>
+```
+
+### Log Parser
+
+log-surgeon provides a log parser as a high-level API. The log parser consumes the parsed tokens
+from the underlying lexer, and constructs log events using the following parsing rules:
+```
+<log-event> ::= <timestamp> <msg-token-sequence> <end-of-line>
+
+<msg-token-sequence> ::= <msg-token> <msg-token-sequence>
+                   | ε  (* empty sequence *)
+
+<msg-token> ::= <variable>
+          | <static-text>
+
+<timestamp> ::= TOKEN(Timestamp)
+
+<variable> ::= TOKEN(Variable)
+
+<static-text> ::= TOKEN(StaticText)
+          | TOKEN(StaticText_EndOfLine)
+
+<end-of-line> ::= TOKEN(StaticText_EndOfLine)
+```
+NOTE: In practice, the first log event might miss the timestamp and the last log event might miss
+the end-of-line due to file/stream truncations.
+
+**Example**:
+
+A simple example program is provided in [examples/simple-parser](examples/simple-parser) to parse a
+given log file and print all the constructed log events. You can use the following commands to run
+the program and parse the sample logs:
+```shell
+cd examples/simple-parser
+cargo run -- ../schema.yaml ../logs/hive-24h.log
+# If you want to try some other inputs, run:
+# cargo run -- <SCHEMA_FILE_PATH> <INPUT_FILE_PATH>
+```
 
 
 ## Reproducibility Guide
