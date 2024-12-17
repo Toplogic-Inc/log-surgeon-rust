@@ -120,7 +120,7 @@ parsers:
   - A **low-level API** for streaming lexer-generated tokens.
   - A **high-level API** that structures tokens into parsed log events for easier consumption.
 
-Check **User's Guide** section for more details.
+Check [User's Guide](#users-guide) section for more details.
 
 As the library prioritizes log parsing, the regex engine is not part of the default API. To access
 regex-specific functionality, enable the `regex-engine` feature in the Cargo configuration. This
@@ -223,14 +223,32 @@ cargo run -- ../schema.yaml ../logs/hive-24h.log
 
 ## Experimental Results
 
-We've tested and benchmarked both lexer and log parser APIs on real-world unstructured log dataset.
-This section demonstrates our experimental results.
+We conducted tests and benchmarks on both the lexer and log parser APIs using real-world
+unstructured log datasets. This section summarizes the results of our experiments.
 
-| Dataset                                | Total Log Size (GByte) | # Tokens   | Lexer Execution Time (real time in seconds) | Lexer Throughput (#tokens / sec) | Parser Execution Time (real time in seconds) | Parser Throughput (MByte / sec) |
-|----------------------------------------|------------------------|------------|---------------------------------------------|----------------------------------|---------------------------------------------|---------------------------------|
-| [hive-24hr][log-hive]                  | 1.99                   | 62334502   | 9.726                                       | 6409058.40                       | 10.125                                      | 201.08                          |
-| [openstack-24hr][log-open-stack]       | 33.00                  | 878471152  | 178.398                                     | 4924220.85                       | 198.826                                     | 169.94                          |
-| [hadoop-cluster1-worker1][log-hadoop] | 84.77                  | 2982800187 | 442.400                                     | 6742010.28                       | 492.523                                     | 176.25                          |
+| Dataset                              | Total Log Size (GByte) | # Tokens   | Lexer Execution Time (real time in seconds) | Lexer Throughput (#tokens / sec) | Parser Execution Time (real time in seconds) | Parser Throughput (MByte / sec) |
+|--------------------------------------|------------------------|------------|---------------------------------------------|----------------------------------|----------------------------------------------|---------------------------------|
+| [hive-24hr][log-hive]                | 1.99                   | 62334502   | 9.726                                       | 6409058.40                       | 10.125                                       | 201.08                          |
+| [openstack-24hr][log-open-stack]     | 33.00                  | 878471152  | 178.398                                     | 4924220.85                       | 198.826                                      | 169.94                          |
+| [hadoop-cluster1-worker1][log-hadoop]| 84.77                  | 2982800187 | 442.400                                     | 6742010.28                       | 492.523                                      | 176.25                          |
+
+**NOTE**:
+- The log datasets are hyperlinked in the table above for reference.
+- Execution environment:
+  - OS: Ubuntu 22.04.3 LTS on Windows 10.0.22631 x86_64
+  - Kernel: 5.15.167.4-microsoft-standard-WSL2
+  - CPU: Intel i9-14900K (32) @ 3.187GHz
+  - Memory: 48173MiB
+- The schema config used for these experiments is available [here](examples/schema.yaml).
+- The experiments were executed using the example program [here](examples/benchmark/src/main.rs).
+
+Given the time constraints, the team is satisfied with the current experimental results. While we
+have additional optimization plans in mind (see
+[Lessons Learned and Concluding Remarks](#lessons-learned-and-concluding-remarks)), the current
+throughput is already within a reasonable range. It is worth noting that performance should remain
+similar even with a more complex schema file. This consistency is achieved through the use of
+delimiters and a deterministic finite automaton (DFA), which ensures an almost-linear time
+complexity, bounded by the number of bytes in the input log stream.
 
 ## Reproducibility Guide
 There are several regression tests in the `tests` directory of the repository as well as in the
@@ -256,7 +274,7 @@ The example uses the repository relative path to include the dependency. If you 
 library in your project, you can follow the user's guide above where you should specify the git URL
 to obtain the latest version of the library.
 
-## Contributions by each team member
+## Contributions
 1. **[Louis][github-siwei]**
 - Implemented the draft version of the AST-to-NFA conversion.
 - Implemented the conversion from one or more NFAs to a single DFA.
@@ -272,7 +290,7 @@ to obtain the latest version of the library.
 Both members contributed to the overall architecture, unit testing, integration testing, and library
 finalization. Both members reviewed the other's implementation through GitHub's Pull Request.
 
-## Lessons learned and concluding remarks
+## Lessons Learned and Concluding Remarks
 This project provided us with an excellent opportunity to learn about the Rust programming language.
 We gained hands-on experience with Rust's borrowing system, which helped us write safe and reliable
 code.
@@ -292,7 +310,7 @@ the gap in the Rust ecosystem where there is no high-performance unstructured lo
 The future work:
 - Improve DFA simulation performance.
 - Implement [tagged-DFA][wiki-tagged-dfa] to support more powerful variable extraction.
-- Optimize the lexer to emit tokens based on buffer views, reducing internal string copying.
+- Optimize the lexer to emit tokens based on buffer views, reducing internal data copying.
 
 [badge-apache]: https://img.shields.io/badge/license-APACHE-blue.svg
 [badge-build-status]: https://github.com/Toplogic-Inc/log-surgeon-rust/workflows/CI/badge.svg
