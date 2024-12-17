@@ -251,28 +251,48 @@ delimiters and a deterministic finite automaton (DFA), which ensures an almost-l
 complexity, bounded by the number of bytes in the input log stream.
 
 ## Reproducibility Guide
-There are several regression tests in the `tests` directory of the repository as well as in the
-individual components of the project. You can run the tests to ensure that the library is working
-as expected. The tests include testing the AST to NFA conversion, the NFA to DFA conversion, the
-DFA simulation on the input stream, and the correct passing of unstructured logs given input file
-and log searching schema.
 
-To run the tests, you can use the following command:
+### Testing
+Let's start with unit tests and integration tests. You can run the default cargo test command for
+testing:
 ```shell
 cargo test
 ```
-
-There are also example usage of the library in the `examples` directory of the repository. You can
-run the examples to see how the library can be used or be reproduced in a real-world scenario. Assume
-you are in the root directory of the repository, you can run the following command to change your
-directory to the examples directory and run the example:
+We also have GitHub CI enabled to automate the testing flow. Check [here][project-gh-action] for our
+recent workflow activities. Notice that we use [cargo-nextest][nextest] for our internal development
+and CI workflows for its cleaner user interface. If you have `cargo-nextest` installed already, you
+can run:
 ```shell
-cd examples
-cargo run
+cargo nextest run --all-features
 ```
-The example uses the repository relative path to include the dependency. If you want to include the
-library in your project, you can follow the user's guide above where you should specify the git URL
-to obtain the latest version of the library.
+
+### Example Programs
+We have provided two example programs, [lexer](examples/lexer) and
+[simple-parser](examples/simple-parser), to demonstrate how to use log-surgeon. These programs
+accept any valid schema files or log files as inputs, which can be specified via the command line.
+For more details, refer to the [User's Guid](#users-guide) section.
+
+We have prepared a short [video demo][video-demo] showcasing log-surgeon in action. The demo uses
+the simple-parser as an example. To reproduce the demo, run the following commands:
+```shell
+cd examples/simple-parser
+cargo build --release
+target/release/simple-parser ../schema.yaml ../logs/hive-24h.log
+```
+Note: The top-level structure of this project has changed a little bit since the video was recorded.
+However, the results should be the same by running the commands above.
+
+### Experimental Results
+The experimental result statistics were measured using the example program
+[benchmark](examples/benchmark). To reproduce these experiments or run them on other datasets,
+run the following commands:
+```shell
+# Download the entire dataset in `$DATASET_DIR`
+# Locate the schema config for experiments in `$SCHEMA_CONFIG_PATH`
+cd examples/benchmark
+cargo build --release
+target/release/benchmark $SCHEMA_CONFIG_PATH $DATASET_DIR
+```
 
 ## Contributions
 1. **[Louis][github-siwei]**
@@ -326,6 +346,7 @@ The future work:
 [log-hive]: https://zenodo.org/records/7094921
 [log-open-stack]: https://zenodo.org/records/7094972
 [mongodb-logs]: https://zenodo.org/records/11075361
+[nextest]: https://nexte.st/
 [project-gh-action]: https://github.com/Toplogic-Inc/log-surgeon-rust/actions
 [regex-syntax-ast-Ast]: https://docs.rs/regex-syntax/latest/regex_syntax/ast/enum.Ast.html
 [wiki-dfa]: https://en.wikipedia.org/wiki/Deterministic_finite_automaton
