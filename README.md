@@ -120,6 +120,8 @@ parsers:
   - A **low-level API** for streaming lexer-generated tokens.
   - A **high-level API** that structures tokens into parsed log events for easier consumption.
 
+Check [User's Guide](#users-guide) section for more details.
+
 As the library prioritizes log parsing, the regex engine is not part of the default API. To access
 regex-specific functionality, enable the `regex-engine` feature in the Cargo configuration. This
 feature provides APIs for:
@@ -127,54 +129,172 @@ feature provides APIs for:
 - Merging multiple NFAs into a single DFA.
 - Simulating a DFA with character streams or strings.
 
-## Architecture Overview
-![log-surgeon-arch-overview](docs/src/overall-arch-diagram.png)
 
 ## User's Guide
-log-surgeon is a Rust library for high-performance parsing of unstructured text logs. It is being 
-shipped as a Rust crate and can be included in your Rust project by adding the following line to
-your `Cargo.toml` file:
+
+log-surgeon is a Rust library for high-performance parsing of unstructured text logs. It is
+being shipped as a Rust crate and can be included in your Rust project by adding the following line
+to your `Cargo.toml` file:
 ```toml
 [dependencies]
 log-surgeon = { git = "https://github.com/Toplogic-Inc/log-surgeon-rust", branch = "main" }
 ```
 
-Example usage of the library can be found in the examples directory of the repository. You can use
-the following code to confirm that you successfully included the library and check the version of
-the library:
-```rust
-extern crate log_surgeon;
+### Architecture Overview
+![log-surgeon-arch-overview](docs/src/overall-arch-diagram.png)
 
-fn main() {
-    println!("You are using log-surgeon version: {}", log_surgeon::version());
-}
+### User-defined Schema Config
+
+log-surgeon allows users to customize their own log parser using schema. For detailed instructions,
+refer to the [Schema Documentation](docs/Schema.md).
+
+### Lexer
+
+log-surgeon provides its lexer as a low-level API, which parses log events into a stream of tokens.
+Tokens can be classified into the following types:
+
+- **Timestamp**: A token that matches a defined timestamp pattern.
+- **Variable**: A token that matches a defined variable pattern.
+- **StaticText**: A token that does not match any timestamp or variable pattern.
+- **StaticTextWithNewline**: A variant of StaticText that ends with a newline character ('\n').
+
+**Tips**:
+- Each token holds a byte buffer as its value.
+- A timestamp token includes an ID that corresponds to the regex pattern defined in the schema
+config.
+- A variable token includes an ID that maps to the variable name and its associated regex pattern in
+the schema config.
+- Each token also retains source information, indicating the line in the input from which the token 
+was extracted.
+
+The lexer also allows users to define their own **custom input type**. To integrate a custom input
+log stream, it must implement the [log_surgeon::lexer::LexerStream](src/lexer/lexer_stream.rs)
+trait, which consumes the stream byte by byte. By default, we provide
+[log_surgeon::Lexer::BufferedFileStream](src/lexer/streams.rs) to read a log file from file system.
+
+**Example**:
+
+A simple example program is provided in [examples/lexer](examples/lexer/src/main.rs) to parse a
+given log file and print all the tokens. You can use the following commands to run the program and
+parse the sample logs:
+```shell
+cd examples/lexer
+cargo run -- ../schema.yaml ../logs/hive-24h.log
+# If you want to try some other inputs, run:
+# cargo run -- <SCHEMA_FILE_PATH> <INPUT_FILE_PATH>
 ```
 
-## Reproducibility Guide
-There are several regression tests in the `tests` directory of the repository as well as in the
-individual components of the project. You can run the tests to ensure that the library is working
-as expected. The tests include testing the AST to NFA conversion, the NFA to DFA conversion, the
-DFA simulation on the input stream, and the correct passing of unstructured logs given input file
-and log searching schema.
+### Log Parser
 
-To run the tests, you can use the following command:
+log-surgeon provides a log parser as a high-level API. The log parser consumes the parsed tokens
+from the underlying lexer, and constructs log events using the following parsing rules:
+```
+<log-event> ::= <timestamp> <msg-token-sequence> <end-of-line>
+
+<msg-token-sequence> ::= <msg-token> <msg-token-sequence>
+                   | ε  (* empty sequence *)
+
+<msg-token> ::= <variable>
+          | <static-text>
+
+<timestamp> ::= TOKEN(Timestamp)
+
+<variable> ::= TOKEN(Variable)
+
+<static-text> ::= TOKEN(StaticText)
+          | TOKEN(StaticText_EndOfLine)
+
+<end-of-line> ::= TOKEN(StaticText_EndOfLine)
+```
+NOTE: In practice, the first log event might miss the timestamp and the last log event might miss
+the end-of-line due to file/stream truncations.
+
+**Example**:
+
+A simple example program is provided in [examples/simple-parser](examples/simple-parser/src/main.rs)
+to parse a given log file and print all the constructed log events. You can use the following
+commands to run the program and parse the sample logs:
+```shell
+cd examples/simple-parser
+cargo run -- ../schema.yaml ../logs/hive-24h.log
+# If you want to try some other inputs, run:
+# cargo run -- <SCHEMA_FILE_PATH> <INPUT_FILE_PATH>
+```
+
+## Experimental Results
+
+We conducted tests and benchmarks on both the lexer and log parser APIs using real-world
+unstructured log datasets. This section summarizes the results of our experiments.
+
+| Dataset                              | Total Log Size (GByte) | # Tokens   | Lexer Execution Time (real time in seconds) | Lexer Throughput (#tokens / sec) | Parser Execution Time (real time in seconds) | Parser Throughput (MByte / sec) |
+|--------------------------------------|------------------------|------------|---------------------------------------------|----------------------------------|----------------------------------------------|---------------------------------|
+| [hive-24hr][log-hive]                | 1.99                   | 62334502   | 9.726                                       | 6409058.40                       | 10.125                                       | 201.08                          |
+| [openstack-24hr][log-open-stack]     | 33.00                  | 878471152  | 178.398                                     | 4924220.85                       | 198.826                                      | 169.94                          |
+| [hadoop-cluster1-worker1][log-hadoop]| 84.77                  | 2982800187 | 442.400                                     | 6742010.28                       | 492.523                                      | 176.25                          |
+
+**NOTE**:
+- The log datasets are hyperlinked in the table above for reference.
+- Execution environment:
+  - OS: Ubuntu 22.04.3 LTS on Windows 10.0.22631 x86_64
+  - Kernel: 5.15.167.4-microsoft-standard-WSL2
+  - CPU: Intel i9-14900K (32) @ 3.187GHz
+  - Memory: 48173MiB
+- The schema config used for these experiments is available [here](examples/schema.yaml).
+- The experiments were executed using the example program [here](examples/benchmark/src/main.rs).
+
+Given the time constraints, the team is satisfied with the current experimental results. While we
+have additional optimization plans in mind (see
+[Lessons Learned and Concluding Remarks](#lessons-learned-and-concluding-remarks)), the current
+throughput is already within a reasonable range. It is worth noting that performance should remain
+similar even with a more complex schema file. This consistency is achieved through the use of
+delimiters and a deterministic finite automaton (DFA), which ensures an almost-linear time
+complexity, bounded by the number of bytes in the input log stream.
+
+## Reproducibility Guide
+
+### Testing
+Let's start with unit tests and integration tests. You can run the default cargo test command for
+testing:
 ```shell
 cargo test
 ```
-
-There are also example usage of the library in the `examples` directory of the repository. You can
-run the examples to see how the library can be used or be reproduced in a real-world scenario. Assume
-you are in the root directory of the repository, you can run the following command to change your
-directory to the examples directory and run the example:
+We also have GitHub CI enabled to automate the testing flow. Check [here][project-gh-action] for our
+recent workflow activities. Notice that we use [cargo-nextest][nextest] for our internal development
+and CI workflows for its cleaner user interface. If you have `cargo-nextest` installed already, you
+can run:
 ```shell
-cd examples
-cargo run
+cargo nextest run --all-features
 ```
-The example uses the repository relative path to include the dependency. If you want to include the
-library in your project, you can follow the user's guide above where you should specify the git URL
-to obtain the latest version of the library.
 
-## Contributions by each team member
+### Example Programs
+We have provided two example programs, [lexer](examples/lexer) and
+[simple-parser](examples/simple-parser), to demonstrate how to use log-surgeon. These programs
+accept any valid schema files or log files as inputs, which can be specified via the command line.
+For more details, refer to the [User's Guid](#users-guide) section.
+
+We have prepared a short [video demo][video-demo] showcasing log-surgeon in action. The demo uses
+the simple-parser as an example. To reproduce the demo, run the following commands:
+```shell
+cd examples/simple-parser
+cargo build --release
+target/release/simple-parser ../schema.yaml ../logs/hive-24h.log
+```
+Note: The top-level structure of this project has changed a little bit since the video was recorded.
+However, the results should be the same by running the commands above.
+
+### Experimental Results
+The experimental result statistics were measured using the example program
+[benchmark](examples/benchmark). To reproduce these experiments or run them on other datasets,
+run the following commands:
+```shell
+# Download the entire dataset in `$DATASET_DIR`
+# Locate the schema config for experiments in `$SCHEMA_CONFIG_PATH`
+cd examples/benchmark
+cargo build --release
+target/release/benchmark $SCHEMA_CONFIG_PATH $DATASET_DIR
+```
+
+## Contributions
 1. **[Louis][github-siwei]**
 - Implemented the draft version of the AST-to-NFA conversion.
 - Implemented the conversion from one or more NFAs to a single DFA.
@@ -190,7 +310,7 @@ to obtain the latest version of the library.
 Both members contributed to the overall architecture, unit testing, integration testing, and library
 finalization. Both members reviewed the other's implementation through GitHub's Pull Request.
 
-## Lessons learned and concluding remarks
+## Lessons Learned and Concluding Remarks
 This project provided us with an excellent opportunity to learn about the Rust programming language.
 We gained hands-on experience with Rust's borrowing system, which helped us write safe and reliable
 code.
@@ -210,7 +330,7 @@ the gap in the Rust ecosystem where there is no high-performance unstructured lo
 The future work:
 - Improve DFA simulation performance.
 - Implement [tagged-DFA][wiki-tagged-dfa] to support more powerful variable extraction.
-- Optimize the lexer to emit tokens based on buffer views, reducing internal string copying.
+- Optimize the lexer to emit tokens based on buffer views, reducing internal data copying.
 
 [badge-apache]: https://img.shields.io/badge/license-APACHE-blue.svg
 [badge-build-status]: https://github.com/Toplogic-Inc/log-surgeon-rust/workflows/CI/badge.svg
@@ -222,7 +342,11 @@ The future work:
 [github-zhihao]: https://github.com/LinZhihao-723
 [hadoop-logs]: https://zenodo.org/records/7114847
 [home-page]: https://github.com/Toplogic-Inc/log-surgeon-rust
+[log-hadoop]: https://zenodo.org/records/7114847
+[log-hive]: https://zenodo.org/records/7094921
+[log-open-stack]: https://zenodo.org/records/7094972
 [mongodb-logs]: https://zenodo.org/records/11075361
+[nextest]: https://nexte.st/
 [project-gh-action]: https://github.com/Toplogic-Inc/log-surgeon-rust/actions
 [regex-syntax-ast-Ast]: https://docs.rs/regex-syntax/latest/regex_syntax/ast/enum.Ast.html
 [wiki-dfa]: https://en.wikipedia.org/wiki/Deterministic_finite_automaton
